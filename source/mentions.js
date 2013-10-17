@@ -57,6 +57,8 @@ function(self){ return {
         $.each(self.options.cssCloneProps, function() {
             overlay.css(this, textarea.css(this));
         });
+
+        overlay.css('opacity', 1);
     },
 
     buffer: [],

@@ -12,10 +12,15 @@
 		margin: 0;
 		border: 0;
 		background: transparent;
+		.box-shadow(~"none");
+		.border-radius(0);
 	}
 
 	// Overlay
-	pre {
+	// Using <div> because it seems to wrap more
+	// accurately than <pre> although alistapart
+	// suggested the use of <pre>. FB uses <div>.
+	div {
 		.reset();
 
 		// Fill up the width as determined
@@ -39,10 +44,18 @@
 		// controller is implemented.
 		opacity: 0;
 
-		> b {
+		// Mozilla has padding on each side of the textarea,
+		// so we emulate it in our textarea.
+		// Using 1px instead of 1.5px because it seems to be more accurate.
+		// http://stackoverflow.com/questions/4374537/how-to-force-firefox-to-render-textarea-padding-the-same-as-in-a-div
+		-moz-padding-end: 1px;
+		-moz-padding-start: 1px;
+
+		// Using span because it has less css conflicts
+		> span {
 			background: #C2E2FF;
 			.border-radius(2px);
-			.box-shadow(~"0 0 1px #005C87 inset")
+			.box-shadow(~"0 0 1px #005C87 inset");
 		}
 	}
 
