@@ -1,0 +1,73 @@
+.mentions {
+
+	// This is so textarea can
+	// reposition itself on top
+	// of mentions overlay
+	position: relative;
+
+	.reset() {
+
+		// Reset everything.
+		padding: 0;
+		margin: 0;
+		border: 0;
+		background: transparent;
+	}
+
+	// Overlay
+	pre {
+		.reset();
+
+		// Fill up the width as determined
+		// by mentions-textfield.
+		width: 100%;
+
+		// Ensure overlay is always below textarea
+		top: 0;
+		left: 0;
+		z-index: 1;
+
+		// Ensure both pre & textarea
+		// has the same word wrap behavior.
+		white-space: pre-wrap;
+		word-wrap: break-word;		
+
+		// Text color comes from textarea.
+		color: transparent;
+
+		// Overlay is transparent until
+		// controller is implemented.
+		opacity: 0;
+
+		> b {
+			background: #C2E2FF;
+			.border-radius(2px);
+			.box-shadow(~"0 0 1px #005C87 inset")
+		}
+	}
+
+	// Textarea
+	textarea {
+
+		.reset();
+
+		// The pre tag will have the actual width & height.
+		position: absolute;
+		width: 100%;
+		height: 100%;
+
+		// Ensure textarea is always above overlay
+		top: 0;
+		left: 0;		
+		z-index: 2;
+
+		// Ensure both pre & textarea
+		// has the same word wrap behavior.
+		white-space: pre-wrap;
+		word-wrap: break-word;
+
+		// Disable corner resize handle.
+		resize: none;
+		outline: none;
+	}
+}
