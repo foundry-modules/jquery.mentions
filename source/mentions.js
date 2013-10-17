@@ -31,7 +31,7 @@ $.Controller("Mentions",
             'lineHeight', 'textDecoration', 'letterSpacing',
             'fontSize', 'fontFamily', 'fontStyle', 
             'fontWeight', 'textTransform', 'textAlign', 
-            'direction', 'wordSpacing', 'fontSizeAdjust',
+            'direction', 'wordSpacing', 'fontSizeAdjust'
         ],
 
         "{textarea}": "[data-mentions-textarea]",
@@ -83,13 +83,11 @@ function(self){ return {
 
             case KEYCODE.BACKSPACE:
                 self.buffer = self.buffer.slice(0, -1 + self.buffer.length);
-                break;
             
                 $.defer(self.resetBuffer);
                 break;
 
-            case KEYCODE.SPACE
-
+            case KEYCODE.SPACE:
                 if (!self.hidden) return;
                 $.defer(self.resetBuffer);
                 break;
