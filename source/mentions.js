@@ -262,8 +262,14 @@ function(self){ return {
                 .val($(block).clone().toHTML());
 
             // TODO: Retrieve block type & value 
+
         } else {
 
+            self.blockText()
+                .val('');
+
+            self.blockHtml()
+                .val('');
         }
     },
 
@@ -284,8 +290,8 @@ function(self){ return {
 
             var node = nodes[i],
                 nodeType = node.nodeType,
-                text,
-                block;
+                text = null,
+                block = null;
 
             switch (nodeType) {
 
