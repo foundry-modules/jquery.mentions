@@ -52,7 +52,7 @@ var KEYCODE = {
 
 // Templates
 $.template("mentions/item", '<b>[%= value %]</b>');
-$.template("mentions/inspector", '<div class="mentions-inspector" data-mentions-inspector><fieldset><b>Selection</b><hr/><label>Start</label><input type="text" data-mentions-selection-start/><hr/><label>End</label><input type="text" data-mentions-selection-end/><hr/><label>Length</label><input type="text" data-mentions-selection-length/></fieldset><fieldset><b>Block</b><hr/><label>Start</label><input type="text" data-mentions-block-start/><hr/><label>End</label><input type="text" data-mentions-block-end/><hr/><label>Length</label><input type="text" data-mentions-block-length/><hr/><label>Text</label><input type="text" data-mentions-block-text/><hr/><label>Html</label><input type="text" data-mentions-block-html/><hr/><label>Type</label><input type="text" data-mentions-block-type/><hr/><label>Value</label><input type="text" data-mentions-block-value/></fieldset></div>');
+$.template("mentions/inspector", '<div class="mentions-inspector" data-mentions-inspector><fieldset><b>Selection</b><hr/><label>Start</label><input type="text" data-mentions-selection-start/><hr/><label>End</label><input type="text" data-mentions-selection-end/><hr/><label>Length</label><input type="text" data-mentions-selection-length/><hr/></fieldset><fieldset><b>Trigger</b><hr/><label>Key</label><input type="text" data-mentions-trigger-key/><hr/><label>Type</label><input type="text" data-mentions-trigger-type/><hr/><label>Buffer</label><input type="text" data-mentions-trigger-buffer/><hr/></fieldset><hr/> <fieldset><b>Marker</b><hr/><label>Index</label><input type="text" data-mentions-marker-index/><hr/><label>Start</label><input type="text" data-mentions-marker-start/><hr/><label>End</label><input type="text" data-mentions-marker-end/><hr/><label>Length</label><input type="text" data-mentions-marker-length/><hr/><label>Text</label><input type="text" data-mentions-marker-text/><hr/></fieldset><fieldset><b>Block</b><hr/><label>Html</label><input type="text" data-mentions-block-html/><hr/><label>Text</label><input type="text" data-mentions-block-text/><hr/><label>Type</label><input type="text" data-mentions-block-type/><hr/><label>Value</label><input type="text" data-mentions-block-value/><hr/></fieldset></div>');
 
 /*
 <div class="mentions-inspector" data-mentions-inspector>
@@ -67,30 +67,56 @@ $.template("mentions/inspector", '<div class="mentions-inspector" data-mentions-
         <hr/>
         <label>Length</label>
         <input type="text" data-mentions-selection-length/>
+        <hr/>
+    </fieldset>
+    <fieldset>
+        <b>Trigger</b>
+        <hr/>
+        <label>Key</label>
+        <input type="text" data-mentions-trigger-key/>
+        <hr/>
+        <label>Type</label>
+        <input type="text" data-mentions-trigger-type/>
+        <hr/>
+        <label>Buffer</label>
+        <input type="text" data-mentions-trigger-buffer/>
+        <hr/>
+    </fieldset>
+    <hr/> 
+    <fieldset>
+        <b>Marker</b>
+        <hr/>
+        <label>Index</label>
+        <input type="text" data-mentions-marker-index/>
+        <hr/>
+        <label>Start</label>
+        <input type="text" data-mentions-marker-start/>
+        <hr/>
+        <label>End</label>
+        <input type="text" data-mentions-marker-end/>
+        <hr/>
+        <label>Length</label>
+        <input type="text" data-mentions-marker-length/>
+        <hr/>
+        <label>Text</label>
+        <input type="text" data-mentions-marker-text/>
+        <hr/>
     </fieldset>
     <fieldset>
         <b>Block</b>
         <hr/>
-        <label>Start</label>
-        <input type="text" data-mentions-block-start/>
-        <hr/>
-        <label>End</label>
-        <input type="text" data-mentions-block-end/>
-        <hr/>
-        <label>Length</label>
-        <input type="text" data-mentions-block-length/>
+        <label>Html</label>
+        <input type="text" data-mentions-block-html/>
         <hr/>
         <label>Text</label>
         <input type="text" data-mentions-block-text/>
-        <hr/>
-        <label>Html</label>
-        <input type="text" data-mentions-block-html/>
         <hr/>
         <label>Type</label>
         <input type="text" data-mentions-block-type/>
         <hr/>
         <label>Value</label>
         <input type="text" data-mentions-block-value/>
+        <hr/>
     </fieldset>
 </div>
 */
@@ -116,25 +142,30 @@ $.Controller("Mentions",
 
         triggers: {
             "@": {
-                name: 'entity'
+                type: 'entity'
             },
             "#": {
-                name: 'hashtag'
+                type: 'hashtag'
             }
         },
 
         inspector: false,
 
         "{inspector}": "[data-mentions-inspector]",
-        "{selectionStart}": "[data-mentions-selection-start]",
-        "{selectionEnd}": "[data-mentions-selection-end]",
+
+        "{selectionStart}" : "[data-mentions-selection-start]",
+        "{selectionEnd}"   : "[data-mentions-selection-end]",
         "{selectionLength}": "[data-mentions-selection-length]",
-        "{blockStart}": "[data-mentions-block-start]",
-        "{blockEnd}": "[data-mentions-block-end]",
-        "{blockLength}": "[data-mentions-block-length]",
-        "{blockText}": "[data-mentions-block-text]",
-        "{blockHtml}": "[data-mentions-block-html]",
-        "{blockType}": "[data-mentions-block-type]",
+
+        "{markerIndex}" : "[data-mentions-marker-index]",
+        "{markerStart}" : "[data-mentions-marker-start]",
+        "{markerEnd}"   : "[data-mentions-marker-end]",
+        "{markerLength}": "[data-mentions-marker-length]",
+        "{markerText}"  : "[data-mentions-marker-text]",
+
+        "{blockText}" : "[data-mentions-block-text]",
+        "{blockHtml}" : "[data-mentions-block-html]",
+        "{blockType}" : "[data-mentions-block-type]",
         "{blockValue}": "[data-mentions-block-value]",
 
         "{textarea}": "[data-mentions-textarea]",
@@ -151,6 +182,9 @@ function(self){ return {
         // Temporarily set to true
         self.options.inspector = true;
         self.showInspector();
+
+        // Speed up access to overlay
+        self._overlay = self.overlay()[0];
     },
 
     setLayout: function() {
@@ -189,7 +223,9 @@ function(self){ return {
 
     inspect: function() {
 
-        var caret = self.textarea().caret();
+        var caret = self.textarea().caret(),
+            marker = self.getMarkerAt(caret.start),
+            block = marker.block;
 
         self.selectionStart()
             .val(caret.start);
@@ -199,6 +235,107 @@ function(self){ return {
 
         self.selectionLength()
             .val(caret.end - caret.start);
+
+        self.markerIndex()
+            .val(marker.index)
+            .data('marker', marker);
+
+        self.markerStart()
+            .val(marker.start);
+
+        self.markerEnd()
+            .val(marker.end);
+
+        self.markerLength()
+            .val(marker.length);
+
+        self.markerText()
+            .val(marker.text.nodeValue);
+
+        // If this marker has a block
+        if (block) {
+
+            self.blockText()
+                .val(marker.text.nodeValue);
+
+            self.blockHtml()
+                .val($(block).clone().toHTML());
+
+            // TODO: Retrieve block type & value 
+        } else {
+
+        }
+    },
+
+    "{markerIndex} click": function(el) {
+        console.dir(el.data("marker"));
+    },
+
+    getMarkerAt: function(pos) {
+
+        if (pos===undefined) return;
+
+        var nodes = self._overlay.childNodes,
+            i = 0,
+            start = 0,
+            marker;
+
+        for (; i < nodes.length; i++) {
+
+            var node = nodes[i],
+                nodeType = node.nodeType,
+                text,
+                block;
+
+            switch (nodeType) {
+
+                // Text node
+                case 3:
+                    text = node;
+                    break;
+
+                // Block node
+                case 1:
+
+                    // Get immediate text node
+                    text = node.childNodes[0];
+
+                    // Skip if invalid block format detected
+                    if (!text || text.nodeType!==3) continue;
+
+                    // Store a reference to this node
+                    block = node;
+                    break;
+
+                default:
+                    continue;
+            }
+
+            // Calculate end position
+            var length = text.length,
+                end = start + text.length;
+
+            // If position is inside current node,
+            // stop and return marker.
+            if (pos >= start && pos <= end) {
+
+                marker = {
+                    index: i,
+                    start: start,
+                    end: end,
+                    length: length,
+                    text: text,
+                    block: block
+                };
+                break;
+            }
+
+            // Else reset start position and
+            // continue with next child node.
+            start = end;
+        }
+
+        return marker;
     },
 
     buffer: [],
