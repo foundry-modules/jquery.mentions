@@ -52,7 +52,7 @@ var KEYCODE = {
 
 // Templates
 $.template("mentions/item", '<b>[%= value %]</b>');
-$.template("mentions/inspector", '<div class="mentions-inspector" data-mentions-inspector><fieldset><b>Selection</b><hr/><label>Start</label><input type="text" data-mentions-start/><hr/><label>End</label><input type="text" data-mentions-end/><hr/><label>Length</label><input type="text" data-mentions-length/></fieldset><fieldset><b>Block</b><hr/><label>Start</label><input type="text" data-mentions-block-start/><hr/><label>End</label><input type="text" data-mentions-block-end/><hr/><label>Length</label><input type="text" data-mentions-block-length/><hr/><label>Text</label><input type="text" data-mentions-block-text/><hr/><label>Html</label><input type="text" data-mentions-block-html/><hr/><label>Type</label><input type="text" data-mentions-block-type/><hr/><label>Value</label><input type="text" data-mentions-block-value/></fieldset></div>');
+$.template("mentions/inspector", '<div class="mentions-inspector" data-mentions-inspector><fieldset><b>Selection</b><hr/><label>Start</label><input type="text" data-mentions-selection-start/><hr/><label>End</label><input type="text" data-mentions-selection-end/><hr/><label>Length</label><input type="text" data-mentions-selection-length/></fieldset><fieldset><b>Block</b><hr/><label>Start</label><input type="text" data-mentions-block-start/><hr/><label>End</label><input type="text" data-mentions-block-end/><hr/><label>Length</label><input type="text" data-mentions-block-length/><hr/><label>Text</label><input type="text" data-mentions-block-text/><hr/><label>Html</label><input type="text" data-mentions-block-html/><hr/><label>Type</label><input type="text" data-mentions-block-type/><hr/><label>Value</label><input type="text" data-mentions-block-value/></fieldset></div>');
 
 /*
 <div class="mentions-inspector" data-mentions-inspector>
@@ -60,13 +60,13 @@ $.template("mentions/inspector", '<div class="mentions-inspector" data-mentions-
         <b>Selection</b>
         <hr/>
         <label>Start</label>
-        <input type="text" data-mentions-start/>
+        <input type="text" data-mentions-selection-start/>
         <hr/>
         <label>End</label>
-        <input type="text" data-mentions-end/>
+        <input type="text" data-mentions-selection-end/>
         <hr/>
         <label>Length</label>
-        <input type="text" data-mentions-length/>
+        <input type="text" data-mentions-selection-length/>
     </fieldset>
     <fieldset>
         <b>Block</b>
@@ -126,9 +126,20 @@ $.Controller("Mentions",
         inspector: false,
 
         "{inspector}": "[data-mentions-inspector]",
+        "{selectionStart}": "[data-mentions-selection-start]",
+        "{selectionEnd}": "[data-mentions-selection-end]",
+        "{selectionLength}": "[data-mentions-selection-length]",
+        "{blockStart}": "[data-mentions-block-start]",
+        "{blockEnd}": "[data-mentions-block-end]",
+        "{blockLength}": "[data-mentions-block-length]",
+        "{blockText}": "[data-mentions-block-text]",
+        "{blockHtml}": "[data-mentions-block-html]",
+        "{blockType}": "[data-mentions-block-type]",
+        "{blockValue}": "[data-mentions-block-value]",
 
         "{textarea}": "[data-mentions-textarea]",
-        "{overlay}" : "[data-mentions-overlay]"
+        "{overlay}" : "[data-mentions-overlay]",
+        "{block}"   : "[data-mentions-overlay] > span"
     }
 },
 function(self){ return {
@@ -176,6 +187,20 @@ function(self){ return {
         self.inspector().hide();
     },
 
+    inspect: function() {
+
+        var caret = self.textarea().caret();
+
+        self.selectionStart()
+            .val(caret.start);
+
+        self.selectionEnd()
+            .val(caret.end);
+
+        self.selectionLength()
+            .val(caret.end - caret.start);
+    },
+
     buffer: [],
 
     resetBuffer: function() {
@@ -184,6 +209,8 @@ function(self){ return {
     },
 
     "{textarea} keydown": function(textarea, event) {
+
+        self.inspect();
 
         switch (event.keyCode) {
 
@@ -213,8 +240,15 @@ function(self){ return {
 
     "{textarea} keypress": function(textarea, event) {
 
+        self.inspect();
+
         var _char = String.fromCharCode(event.which || event.keyCode);        
         self.buffer.push(_char);
+    },
+
+    "{textarea} keyup": function() {
+
+        self.inspect();
     }
 
 }});
