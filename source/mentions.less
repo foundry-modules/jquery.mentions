@@ -82,5 +82,52 @@
 		// Disable corner resize handle.
 		resize: none;
 		outline: none;
+
+		// Hide scrollbar on textarea
+		overflow: hidden;		
+	}
+}
+
+.mentions-inspector {
+
+	background: #fafafa;
+	.clearfix();
+	border-top: 1px solid #ccc;
+	margin-top: 5px;
+
+	fieldset {
+		width: 50%;
+		float: left;
+		.box-sizing(border-box);
+		padding: 10px;
+	}
+
+	label {
+		display: inline-block;
+		float: left;
+		width: 30%;
+		font-size: 10px;
+		margin: 0;
+		line-height: 26px;
+		text-align: right;
+		padding-right: 5px;
+		.box-sizing(border-box);
+	}
+
+	input {
+		width: 70%;
+		margin: 0;
+		padding: 2px;
+		.box-sizing(border-box);
+	}
+
+	b {
+		text-align: right;
+	}
+
+	hr {
+		margin: 0;
+		.clearfix();
+		opacity: 0;
 	}
 }

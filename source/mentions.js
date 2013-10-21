@@ -1,3 +1,40 @@
+// TODO: Put this elsewhere
+$.fn.caret = function(start, end) {
+
+    if (this.length == 0) return;
+    if (typeof start == 'number')
+    {
+        end = (typeof end == 'number') ? end : start;
+        return this.each(function ()
+        {
+            if (this.setSelectionRange)
+            {
+                this.setSelectionRange(start, end);
+            } else if (this.createTextRange)
+            {
+                var range = this.createTextRange();
+                range.collapse(true);
+                range.moveEnd('character', end);
+                range.moveStart('character', start);
+                try { range.select(); } catch (ex) { }
+            }
+        });
+    } else
+    {
+        if (this[0].setSelectionRange)
+        {
+            start = this[0].selectionStart;
+            end = this[0].selectionEnd;
+        } else if (document.selection && document.selection.createRange)
+        {
+            var range = document.selection.createRange();
+            start = 0 - range.duplicate().moveStart('character', -100000);
+            end = start + range.text.length;
+        }
+        return { start: start, end: end };
+    }
+}
+
 // Constants
 var KEYCODE = {
     BACKSPACE: 8, 
@@ -15,6 +52,48 @@ var KEYCODE = {
 
 // Templates
 $.template("mentions/item", '<b>[%= value %]</b>');
+$.template("mentions/inspector", '<div class="mentions-inspector" data-mentions-inspector><fieldset><b>Selection</b><hr/><label>Start</label><input type="text" data-mentions-start/><hr/><label>End</label><input type="text" data-mentions-end/><hr/><label>Length</label><input type="text" data-mentions-length/></fieldset><fieldset><b>Block</b><hr/><label>Start</label><input type="text" data-mentions-block-start/><hr/><label>End</label><input type="text" data-mentions-block-end/><hr/><label>Length</label><input type="text" data-mentions-block-length/><hr/><label>Text</label><input type="text" data-mentions-block-text/><hr/><label>Html</label><input type="text" data-mentions-block-html/><hr/><label>Type</label><input type="text" data-mentions-block-type/><hr/><label>Value</label><input type="text" data-mentions-block-value/></fieldset></div>');
+
+/*
+<div class="mentions-inspector" data-mentions-inspector>
+    <fieldset>
+        <b>Selection</b>
+        <hr/>
+        <label>Start</label>
+        <input type="text" data-mentions-start/>
+        <hr/>
+        <label>End</label>
+        <input type="text" data-mentions-end/>
+        <hr/>
+        <label>Length</label>
+        <input type="text" data-mentions-length/>
+    </fieldset>
+    <fieldset>
+        <b>Block</b>
+        <hr/>
+        <label>Start</label>
+        <input type="text" data-mentions-block-start/>
+        <hr/>
+        <label>End</label>
+        <input type="text" data-mentions-block-end/>
+        <hr/>
+        <label>Length</label>
+        <input type="text" data-mentions-block-length/>
+        <hr/>
+        <label>Text</label>
+        <input type="text" data-mentions-block-text/>
+        <hr/>
+        <label>Html</label>
+        <input type="text" data-mentions-block-html/>
+        <hr/>
+        <label>Type</label>
+        <input type="text" data-mentions-block-type/>
+        <hr/>
+        <label>Value</label>
+        <input type="text" data-mentions-block-value/>
+    </fieldset>
+</div>
+*/
 
 $.Controller("Mentions",
 {
@@ -24,7 +103,8 @@ $.Controller("Mentions",
     defaultOptions: {
 
         view: {
-            item: "mentions/item"
+            item: "mentions/item",
+            inspector: "mentions/inspector"
         },
 
         cssCloneProps: [
@@ -33,6 +113,19 @@ $.Controller("Mentions",
             'fontWeight', 'textTransform', 'textAlign', 
             'direction', 'wordSpacing', 'fontSizeAdjust'
         ],
+
+        triggers: {
+            "@": {
+                name: 'entity'
+            },
+            "#": {
+                name: 'hashtag'
+            }
+        },
+
+        inspector: false,
+
+        "{inspector}": "[data-mentions-inspector]",
 
         "{textarea}": "[data-mentions-textarea]",
         "{overlay}" : "[data-mentions-overlay]"
@@ -43,6 +136,10 @@ function(self){ return {
     init: function() {
 
         self.cloneLayout();
+
+        // Temporarily set to true
+        self.options.inspector = true;
+        self.showInspector();
     },
 
     setLayout: function() {
@@ -61,6 +158,24 @@ function(self){ return {
         overlay.css('opacity', 1);
     },
 
+    showInspector: function() {
+
+        // If inspector hasn't been created yet
+        if (self.inspector().length < 1) {
+
+            // Create inspector and append to textfield
+            self.view.inspector()
+                .appendTo(self.element);
+        }
+
+        self.inspector().show();
+    },
+
+    hideInspector: function() {
+
+        self.inspector().hide();
+    },
+
     buffer: [],
 
     resetBuffer: function() {
@@ -68,7 +183,7 @@ function(self){ return {
         self.buffer = [];
     },
 
-    "{textarea} keydown": function(textField, event) {
+    "{textarea} keydown": function(textarea, event) {
 
         switch (event.keyCode) {
 
@@ -96,11 +211,10 @@ function(self){ return {
         }
     },
 
-    "{textarea} keypress": function(textField, event) {
+    "{textarea} keypress": function(textarea, event) {
 
         var _char = String.fromCharCode(event.which || event.keyCode);        
         self.buffer.push(_char);
     }
 
 }});
-
