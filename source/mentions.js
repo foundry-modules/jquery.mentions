@@ -446,61 +446,74 @@ function(self){ return {
 
     forEachMarker: function(callback) {
 
-        var nodes = self._overlay.childNodes,
+        var overlay = self._overlay,
+            nodes = overlay.childNodes,
+            node,
             i = 0,
             start = 0,
             before = null,
-            result = [];
+            result = [],
+            iterator = function(marker) {
 
-        for (; i < nodes.length; i++) {
+                // Execute callback while passing in marker object
+                if (callback) ret = callback.apply(marker, [marker]);
 
-            var node = nodes[i],
+                // If callback returned:
+                // false     - stop the loop
+                // null      - don't add anything to the result list
+                // undefined - add the same marker object to the result list
+                // value     - add the value to the result list
+                if (ret===false) break;
+                if (ret!==null) result.push(ret===undefined ? ret : marker);
+            };
+
+        while (node = nodes[i++]) {
+
+            var text, block, end, length,
                 nodeType = node.nodeType,
-                text = block = null, ret, end, length;
+                nodeName = node.nodeName;
 
-            switch (nodeType) {
-
-                case 3: // Text node
-                    text = node;
-                    break;
-
-                case 1: // Block node
-                    // text = node.childNodes[0]; // Get immediate text node
-                    // if (!text || text.nodeType!==3) continue; // Skip if invalid block format detected
-                    block = node; // Store a reference to this node
-                    break;
-
-                default: continue;
+            // If this is a text node, assign this node as marker text
+            if (nodeType==1) {
+                text = node;
+            // else assign this node as marker block,
+            // then test if node is <br/>, create a detached text node contaning a line break,
+            } else if ((block = node) && nodeName=="BR") {
+                text = document.createTextNode("\n");
+            // if this is an invalid node, e.g. node not element, node not span, span has no text child node,
+            // remove code from overlay and skip this loop.
+            } else if (nodeType!==3 || nodeName!=="SPAN" || !(text = node.childNodes[0]) || text.nodeType!==3) {
+                overlay.removeChild(node);
+                continue;
             }
 
             // Create marker object
             var marker = new Marker({
-                index : i,
+                index : i - 1,
                 start : start,
                 end   : (end = start + (length = text.length)),
                 length: length,
                 text  : text,
                 block : block,
-                before: before,
-                parent: self._overlay
+                parent: overlay,
+                before: before
             });
 
-            // Execute callback while passing in marker object
-            if (callback) ret = callback.apply(marker, [marker]);
-
-            // If callback returned:
-            // false     - stop the loop
-            // null      - don't add anything to the result list
-            // undefined - add the same marker object to the result list
-            // value     - add the value to the result list
-            if (ret===false) break;
-            if (ret!==null) result.push(ret===undefined ? ret : marker);
+            // If this is the second iteration, decorate the marker the after property
+            // of the marker before this with the current marker.
+            if (i > 1) {
+                before.after = marker;
+                iterator(before); // Execute iterator for the marker before this
+            }
 
             // Else reset start position and
             // continue with next child node.
-            before = marker;
             start = end;
+            before = marker;
         }
+
+        // Execute iterator one more time for the last marker
+        iterator(before);
 
         return result;
     },
@@ -529,11 +542,10 @@ function(self){ return {
         if (start===undefined) return;
 
         return self.forEachMarker(function(){
-            return (start >= this.start) ? (this.end <= end) ? this : false : null;
+            return (start >= this.start) ? (this.end < end) ? this : false : null;
         });
     },
 
-    buffer: '',
 
     triggered: null,
 
@@ -542,13 +554,9 @@ function(self){ return {
         return self.options.triggers[triggerKey || self.triggered];
     },
 
-    resetBuffer: function() {
-
-        self.buffer = '';
-        self.triggered = null;
-    },
-
     insert: function(charCode, start, end) {
+
+        // TODO: Ability to listen to strings
 
         // Get overlay
         var overlay = self._overlay;
@@ -586,8 +594,6 @@ function(self){ return {
     "{textarea} cut": function(el, event) {
 
         console.log("CUT", arguments);
-
-        // console.log(event.originalEvent.clipboardData.i)
     },
 
     "{textarea} paste": function() {
