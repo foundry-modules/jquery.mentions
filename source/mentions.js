@@ -1,6 +1,8 @@
 // To increase comparession
 var awaitingKeyup_ = "awaitingKeyup",
-    insertBefore_ = "insertBefore";
+    insertBefore_ = "insertBefore",
+    userInCandidateWindow = "userInCandidateWindow",
+    waitForKeyup = "waitForKeyup";
 
 // TODO: Put this elsewhere
 $.fn.caret = function(start, end) {
@@ -349,7 +351,8 @@ function(self){ return {
         self.showInspector();
 
         // Speed up access to overlay
-        self._overlay = self.overlay()[0];
+        self._overlay  = self.overlay()[0];
+        self._textarea = self.textarea()[0];
     },
 
     setLayout: function() {
@@ -581,6 +584,11 @@ function(self){ return {
         }
     },
 
+    remove: function(start, end) {
+
+        self.insert(8, start, end);
+    },
+
     "{textarea} beforecut": function() {
 
         console.log("BEFORECUT", arguments);
@@ -601,103 +609,119 @@ function(self){ return {
         console.log("PASTE", arguments);
     },
 
+    start: null,
+
+    end: null,
+
+    userInCandidateWindow: false,
+
     "{textarea} keydown": function(textarea, event) {
 
-        // See "{textarea} input" for explanation.
-        self[awaitingKeyup_] = true;
+        // If keyup event did not fire after a keydown event,
+        // this means user has entered candidate window mode,
+        // and we should not do anything.
+        if (self.waitForKeyup) {
+            // Scenario 2: Multiple keydown event was triggered without keyup.
+            // See "{textarea} input" for details.
+            self.userInCandidateWindow = true;
+            return;
+        }
 
-        // Unicode characters in OSX requires a user
-        // to hold down the key while pressing a number
-        // from the selection.
+        var caret = textarea.caret();
 
-        console.log("keydown", event.which || event.keyCode, textarea.caret());
+        // Update start & end
+        self.start = caret.start;
+        self.end   = caret.end;
 
-        // Store position of caret before the
-        // character was added to the textarea.
-        var caret = self.caret = textarea.caret(),
-            marker = self.marker = self.getMarkerAt(caret.start);
+        // console.log("keydown", event.which || event.keyCode, textarea.caret());
+
+        // Listen to backspace during keydown because
+        // it is not fired on keypress in Chrome.
+        if (event.keyCode===8) {
+            self.remove(caret.start, caret.end);
+        }
     },
-
 
     // The role of inserting characters is given to keypress
     // because keypress event will not trigger when non-a
     "{textarea} keypress": function(textarea, event) {
 
-        // Keypress do not get triggered when a user
-        // selects an accented character from the candidate window in Chrome + OSX.
+        // FF fires keypress on backspace, while Chrome & IE doesn't.
+        // We normalize this behaviour by not doing anything on backspace.
+        if (event.keyCode===8) return;
 
-        var charCode = $.getChar(event);
+        // Keypress do not get triggered when a user selects an
+        // accented character from the candidate window in Chrome + OSX.
+        // var charCode = $.getChar(event);
 
-        console.log("keypress", charCode, textarea.caret());
+        // console.log("keypress", charCode, textarea.caret());
 
-        if (charCode===false) return;
+        // if (charCode===false) return;
 
-        self.insert(charCode);
+        // self.insert(charCode);
 
-        return;
-
-        var _char = self.currentCharacter = String.fromCharCode(event.which || event.keyCode);
-
-
-        // If a mention has been triggered
-        if (self.triggered) {
-
-            // Push character to trigger buffer
-            self.buffer += _char;
-
-        // Determine if this character is a trigger chracter
-        } else {
-
-            var triggers = self.options.triggers;
-
-            if (triggers.hasOwnProperty(_char)) {
-
-                // If this character is a trigger character,
-                // set triggered to the trigger key;
-                self.triggered = _char;
-            }
-        }
+        // return;
     },
 
-    lastInput: {},
+    substring: function(start, end) {
+        return self._textarea.value.substring(start, end);
+    },
 
-    candidateWindow: {},
+    lastInputEvent: {
+        waitForKeyup: false
+    },
 
     "{textarea} input": function(textarea) {
 
-        // When a person presses keydown and releases, keyup will be triggered,
-        // e.g.
+        // When a person presses keydown and releases, keyup will be triggered, e.g.
+        //
+        // keydown -> input -> keyup
         // 
-        // keydown
-        // input
-        // keyup
-
         // However, when a person presses keydown and goes into candidate window,
-        // keyup event will not be triggered until the user decides on the final word,
-        // e.g.
+        // keyup event will not be triggered until the user decides on the final word, e.g.
         // 
-        // keydown
-        // input (user is typing inside candidate window)
-        // input (..)
-        // input (..) 
-        // input (..)
-        // keyup
-
-        var lastInput = self.lastInput;
+        // Scenario 1: Typing romanized characters of other language
+        //
+        // keydown -> input (user might be typing inside a candidate window)
+        //         -> input (user is now confirmed typing inside candidate window)
+        //         -> input (user is still inside the candidate window)
+        //         -> input (...)
+        //         -> input (...)
+        //         -> keyup (user has selected from the candidate window)
+        //
+        // Scenario 2: Typing accented characters of other language
+        // 
+        // keydown -> keypress (A key was pressed)
+        //         -> input    (input event triggers after keypress)
+        //         -> keydown  (user is holding A key, candidate window shows up)
+        //         -> keydown  (certain users might hold the A key, which will repeat the keydown event)
+        //         -> keydown  (this will also happen when navigating using arrow keys)
+        //         -> keydown  (...)
+        //         -> keyup    (user has selected from the candidate window)
+        //         -> keydown  (this triggers when user presses a number to select from candidate window)
+        //         -> keyup    (this is the keyup event from the number that was pressed)
+        //         -> keypress (FF Only. Keypress is triggered with character code of the selected candidate)
+        //         -> input    (Input event follows. Triggers in all browsers.)
 
         // Determine if user is typing inside a candidate window
-        if (self[awaitingKeyup_] && lastInput[awaitingKeyup_]) {
+        // by detecting if the input event was triggered more than
+        // once without a keyup event between them.
 
+        // Note: Caret position retrieved during input event is
+        // always the position after the character is inserted.
+        var caret = textarea.caret();
+
+        // If we are current inside candidate window
+        if (self[userInCandidateWindow] || (self[userInCandidateWindow] = self[waitForKeyup] && self.lastInputEvent[waitForKeyup])) {
+            self.end = caret.end;
         }
 
         // first & last input = number of characters inserted
-
         // secondLastInput.caretEnd - firstInput.caretEnd + 1 = number of characters types (range to be used)
         // lastInput.caretEnd - firstInput.caretEnd + 1 = number of characters inserted (if 0, one character removed)
 
         var caret = textarea.caret(),
             val = textarea.val();
-
 
         console.log("INPUT", textarea.caret(), arguments);
     },    
@@ -705,8 +729,8 @@ function(self){ return {
     "{textarea} keyup": function(textarea, event) {
 
         // Every keydown event without keyup
-        self.awaitingKeyup = 
-        self.lastInput.awaitingKeyup = false;
+        self[waitForKeyup] = false;
+        self.lastInputEvent[waitForKeyup] = false;
 
 
         console.log("keyup", event.which || event.keyCode, textarea.caret());
@@ -715,10 +739,6 @@ function(self){ return {
 
 
         return;
-
-        var _char = self.currentCharacter,
-            start = self.caret.start,
-            marker = self.getMarkerAt(start);
     }
 
 }});
