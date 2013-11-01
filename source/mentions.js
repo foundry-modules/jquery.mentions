@@ -465,8 +465,8 @@ function(self){ return {
                     break;
 
                 case 1: // Block node
-                    text = node.childNodes[0]; // Get immediate text node
-                    if (!text || text.nodeType!==3) continue; // Skip if invalid block format detected
+                    // text = node.childNodes[0]; // Get immediate text node
+                    // if (!text || text.nodeType!==3) continue; // Skip if invalid block format detected
                     block = node; // Store a reference to this node
                     break;
 
@@ -486,7 +486,7 @@ function(self){ return {
             });
 
             // Execute callback while passing in marker object
-            if (callback) ret = callback.apply(marker, [marker]);            
+            if (callback) ret = callback.apply(marker, [marker]);
 
             // If callback returned:
             // false     - stop the loop
@@ -505,9 +505,9 @@ function(self){ return {
         return result;
     },
 
-    getMarkerAt: function(at) {
+    getMarkerAt: function(pos) {
 
-        if (at===undefined) return;
+        if (pos===undefined) return;
 
         var marker;
 
@@ -515,7 +515,7 @@ function(self){ return {
 
             // If position is inside current node,
             // stop and return marker.
-            if (at >= this.start && at < this.end) {
+            if (pos >= this.start && pos < this.end) {
                 marker = this;
                 return false;
             }
@@ -526,6 +526,11 @@ function(self){ return {
 
     getMarkerBetween: function(start, end) {
 
+        if (start===undefined) return;
+
+        return self.forEachMarker(function(){
+            return (start >= this.start) ? (this.end <= end) ? this : false : null;
+        });
     },
 
     buffer: '',
@@ -543,18 +548,17 @@ function(self){ return {
         self.triggered = null;
     },
 
-    insert: function(charCode) {
+    insert: function(charCode, start, end) {
 
-        // Get chracter, caret, and flags for backspace & new lines.
-        var caret = self.caret;
+        // Get overlay
+        var overlay = self._overlay;
 
         // If we are inserting character
-        if (caret.start===caret.end) {
+        if (start===end) {
 
             // Get marker
-            var overlay = self._overlay,
-                marker  = self.getMarkerAt(caret.start),
-                pos     = caret.start - marker.start,
+            var marker  = self.getMarkerAt(start),
+                pos     = start - marker.start,
                 options = self.getTrigger(block) || {};
 
             // Insert character
@@ -562,6 +566,8 @@ function(self){ return {
 
         // If we are replacing a range of characters
         } else {
+
+            var markers = self.getMarkersBetween(start, end);
 
             // Identify affected markers
         }
@@ -574,7 +580,7 @@ function(self){ return {
 
     "{textarea} beforepaste": function() {
 
-        console.log("BEFOREPASTE", arguments);cut
+        console.log("BEFOREPASTE", arguments);
     },
 
     "{textarea} cut": function(el, event) {
@@ -679,12 +685,12 @@ function(self){ return {
         }
 
         // first & last input = number of characters inserted
-        // secondLastInput.caretEnd - firstInput.caretEnd + 1 = number of characters types
+
+        // secondLastInput.caretEnd - firstInput.caretEnd + 1 = number of characters types (range to be used)
         // lastInput.caretEnd - firstInput.caretEnd + 1 = number of characters inserted (if 0, one character removed)
 
         var caret = textarea.caret(),
             val = textarea.val();
-
 
 
         console.log("INPUT", textarea.caret(), arguments);
