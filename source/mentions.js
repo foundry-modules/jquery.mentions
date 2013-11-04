@@ -789,8 +789,8 @@ function(self){ return {
 
         } else {
             // To retrieve the range of text to be replaced
-            var rangeStart = caretInitial.start,
-                rangeEnd   = caretAfter.end,
+            var rangeStart = caretBefore.start,
+                rangeEnd   = caretBefore.end,
 
                 // To retrieve the text inserted,
                 // take the caret start position on the first keydown event as the text start index,
@@ -814,6 +814,8 @@ function(self){ return {
 
             self.insert(text.charCodeAt(0), rangeStart, rangeEnd);
         }
+
+        self.lengthBefore = length;
 
         console.log("caretInitial", caretInitial);
         console.log("caretBefore" , caretBefore);
