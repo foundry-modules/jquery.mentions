@@ -146,16 +146,16 @@ $.extend(Marker.prototype, {
         this.insert(charCode, this.end - this.start, options);
     },
 
-    insert: function(charCode, pos, options) {
+    insert: function(str, pos, options) {
 
         // Marker
         var marker = this,
 
             // Character
-            char      = String.fromCharCode(charCode),
-            backspace = charCode===8,
-            newline   = charCode===13,
-            space     = charCode===32,
+            // char      = String(charCode),
+            backspace = str===false,
+            newline   = str==="\n",
+            space     = str===" ",
 
             // Text
             text   = marker.text,
@@ -183,7 +183,7 @@ $.extend(Marker.prototype, {
             space && block ? 
 
                 // Add space to the beginning of the previous marker
-                before ? before.append(charCode, options) : 
+                before ? before.append(str, options) : 
 
                 // Add space text node before the marker
                 parent.insertBefore(nbsp, block)
@@ -192,10 +192,10 @@ $.extend(Marker.prototype, {
             :newline ? parent.insertBefore(br, block || text)
 
             // Remove last character from previous marker
-            :backspace ? before && before.append(charCode)
+            :backspace ? before && before.append(str)
 
             // Prepend character
-            :text.nodeValue = char + val;
+            :text.nodeValue = str + val;
 
         // If cursor is at the end of a marker
         } else if (pos===end) {
@@ -203,7 +203,7 @@ $.extend(Marker.prototype, {
             space && block ?
 
                 // Add space to the beginning of the next marker
-                after ? after.prepend(charCode, options)
+                after ? after.prepend(str, options)
 
                 // Add space text node after the marker
                 : parent.insertBefore(nbsp, next)
@@ -215,7 +215,7 @@ $.extend(Marker.prototype, {
             : backspace ? text.nodeValue = val.substr(start, end - 1) 
 
             // Append character
-            : text.nodeValue = val + char; 
+            : text.nodeValue = val + str; 
             
         // If cursor is in the middle of the marker
         } else {
@@ -249,7 +249,7 @@ $.extend(Marker.prototype, {
             // Append character in between
             // Original: hey
             // Result  : hley
-            : text.nodeValue = val.substr(0, pos) + char + val.substr(pos, end);
+            : text.nodeValue = val.substr(0, pos) + str + val.substr(pos, end);
 
             space && block && !options.allowSpace ? 
                 options.mutable ? parent.insertBefore(text.splitText(pos), next)
@@ -602,8 +602,6 @@ function(self){ return {
 
                 var val = marker.text.nodeValue;
 
-                var string = String.fromCharCode(string);
-
                 var newval = val.substring(0,start) + string + val.slice(end);
 
                 marker.val(newval);
@@ -806,15 +804,29 @@ function(self){ return {
             // If we are current inside candidate window
             if (self[userInCandidateWindow] || (self[userInCandidateWindow] = self[waitForKeyup] && lastCaret[waitForKeyup])) {
 
+                console.log("here");
+                rangeStart = caretInitial.start;
+                rangeEnd = lastCaret.after.end;
+
                 // secondLastInput.caretEnd - firstInput.caretEnd + 1 = number of characters types (range to be used)
                 // rangeStart
                 // if (caretAfter.end - lastCaret.end) {
                 // }
+
+// caretInitial Object { start=1, end=1}
+// caretBefore Object { start=1, end=1}
+// caretAfter Object { start=4, end=4}
+// range 1 1
+// text 1 4 a h
+
+
+
             }
 
-            self.insert(text.charCodeAt(0), rangeStart, rangeEnd);
+            self.insert(text, rangeStart, rangeEnd);
         }
 
+        // hold character + press number needs this
         self.lengthBefore = length;
 
         console.log("caretInitial", caretInitial);
