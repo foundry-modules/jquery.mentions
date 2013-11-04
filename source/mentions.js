@@ -2,7 +2,8 @@
 var awaitingKeyup_ = "awaitingKeyup",
     insertBefore_ = "insertBefore",
     userInCandidateWindow = "userInCandidateWindow",
-    waitForKeyup = "waitForKeyup";
+    waitForKeyup = "waitForKeyup",
+    skipInput = "skipInput";
 
 // TODO: Put this elsewhere
 $.fn.caret = function(start, end) {
@@ -132,6 +133,10 @@ var Marker = function(options) {
 }
 
 $.extend(Marker.prototype, {
+
+    val: function(str) {
+        this.text.nodeValue = str;
+    },
 
     prepend: function(charCode, options) {
         this.insert(charCode, 0, options);
@@ -456,6 +461,7 @@ function(self){ return {
             start = 0,
             before = null,
             result = [],
+            skip = false,
             iterator = function(marker) {
 
                 // Execute callback while passing in marker object
@@ -466,8 +472,9 @@ function(self){ return {
                 // null      - don't add anything to the result list
                 // undefined - add the same marker object to the result list
                 // value     - add the value to the result list
-                if (ret===false) break;
                 if (ret!==null) result.push(ret===undefined ? ret : marker);
+
+                return ret; // if ret is false, the parent loop will stop
             };
 
         while (node = nodes[i++]) {
@@ -477,7 +484,7 @@ function(self){ return {
                 nodeName = node.nodeName;
 
             // If this is a text node, assign this node as marker text
-            if (nodeType==1) {
+            if (nodeType==3) {
                 text = node;
             // else assign this node as marker block,
             // then test if node is <br/>, create a detached text node contaning a line break,
@@ -485,7 +492,7 @@ function(self){ return {
                 text = document.createTextNode("\n");
             // if this is an invalid node, e.g. node not element, node not span, span has no text child node,
             // remove code from overlay and skip this loop.
-            } else if (nodeType!==3 || nodeName!=="SPAN" || !(text = node.childNodes[0]) || text.nodeType!==3) {
+            } else if (nodeType!==1 || nodeName!=="SPAN" || !(text = node.childNodes[0]) || text.nodeType!==3) {
                 overlay.removeChild(node);
                 continue;
             }
@@ -506,7 +513,9 @@ function(self){ return {
             // of the marker before this with the current marker.
             if (i > 1) {
                 before.after = marker;
-                iterator(before); // Execute iterator for the marker before this
+                // Execute iterator for the marker before this
+                // If iterator returned false, stop the loop.
+                if (skip = (iterator(before)===false)) break; 
             }
 
             // Else reset start position and
@@ -516,7 +525,7 @@ function(self){ return {
         }
 
         // Execute iterator one more time for the last marker
-        iterator(before);
+        if (!skip) iterator(before);
 
         return result;
     },
@@ -540,7 +549,7 @@ function(self){ return {
         return marker;
     },
 
-    getMarkerBetween: function(start, end) {
+    getMarkersBetween: function(start, end) {
 
         if (start===undefined) return;
 
@@ -557,7 +566,7 @@ function(self){ return {
         return self.options.triggers[triggerKey || self.triggered];
     },
 
-    insert: function(charCode, start, end) {
+    insert: function(string, start, end) {
 
         // TODO: Ability to listen to strings
 
@@ -570,10 +579,15 @@ function(self){ return {
             // Get marker
             var marker  = self.getMarkerAt(start),
                 pos     = start - marker.start,
-                options = self.getTrigger(block) || {};
+                options = self.getTrigger(marker.block) || {};
 
             // Insert character
-            marker.insert(charCode, pos, options);
+            marker.insert(string, pos, options);
+
+            // If marker is a text, and the marker after is a block
+            // ensure the character is added to the end of the text.
+            
+            // If marker 
 
         // If we are replacing a range of characters
         } else {
@@ -581,6 +595,26 @@ function(self){ return {
             var markers = self.getMarkersBetween(start, end);
 
             // Identify affected markers
+
+            if (markers.length==1) {
+
+                var marker = markers[0];
+
+                var val = marker.text.nodeValue;
+
+                var string = String.fromCharCode(string);
+
+                var newval = val.substring(0,start) + string + val.slice(end);
+
+                marker.val(newval);
+
+                console.log(val, newval);
+
+
+
+            } else {
+
+            }
         }
     },
 
@@ -609,10 +643,6 @@ function(self){ return {
         console.log("PASTE", arguments);
     },
 
-    start: null,
-
-    end: null,
-
     userInCandidateWindow: false,
 
     "{textarea} keydown": function(textarea, event) {
@@ -627,19 +657,26 @@ function(self){ return {
             return;
         }
 
+        self.lengthBefore = textarea.val().length;
+        console.log('lengthBefore', self.lengthBefore);
+
         var caret = textarea.caret();
 
-        // Update start & end
-        self.start = caret.start;
-        self.end   = caret.end;
+        self.caretInitial = self.caretBefore = caret;
 
-        // console.log("keydown", event.which || event.keyCode, textarea.caret());
+        // Update start & end
+        // self.start = caret.start;
+        // self.end   = caret.end;
+
+        console.log("keydown", event.which || event.keyCode, textarea.caret());
 
         // Listen to backspace during keydown because
         // it is not fired on keypress in Chrome.
         if (event.keyCode===8) {
             self.remove(caret.start, caret.end);
         }
+
+        self.waitForKeyup = true;
     },
 
     // The role of inserting characters is given to keypress
@@ -649,29 +686,47 @@ function(self){ return {
         // FF fires keypress on backspace, while Chrome & IE doesn't.
         // We normalize this behaviour by not doing anything on backspace.
         if (event.keyCode===8) return;
-
+        
         // Keypress do not get triggered when a user selects an
         // accented character from the candidate window in Chrome + OSX.
-        // var charCode = $.getChar(event);
 
-        // console.log("keypress", charCode, textarea.caret());
+        return;
 
-        // if (charCode===false) return;
+        var charCode = $.getChar(event);
 
-        // self.insert(charCode);
+        if (charCode===false) return;
 
-        // return;
+        // If keypress was called, input event should be ignored to speed up character insertion.
+        self.skipInput = true;
+
+        var caret = self.caretBefore;
+
+        self.insert(charCode, caret.start, caret.end);
+
+        console.log("keypress", charCode, caret);
     },
 
     substring: function(start, end) {
         return self._textarea.value.substring(start, end);
     },
 
-    lastInputEvent: {
+    lengthBefore: null,
+
+    caretInitial: null,
+
+    caretBefore: null,
+
+    caretAfter: null,
+
+    lastCaret: {
+        before: null,
+        after: null,
         waitForKeyup: false
     },
 
     "{textarea} input": function(textarea) {
+
+        if (self[skipInput]) return self[skipInput] = false;
 
         // When a person presses keydown and releases, keyup will be triggered, e.g.
         //
@@ -702,35 +757,85 @@ function(self){ return {
         //         -> keyup    (this is the keyup event from the number that was pressed)
         //         -> keypress (FF Only. Keypress is triggered with character code of the selected candidate)
         //         -> input    (Input event follows. Triggers in all browsers.)
-
+ 
         // Determine if user is typing inside a candidate window
         // by detecting if the input event was triggered more than
-        // once without a keyup event between them.
+        // once without the occurence of keyup event between them.
 
-        // Note: Caret position retrieved during input event is
-        // always the position after the character is inserted.
-        var caret = textarea.caret();
+        // Caret position retrieved on keydown event
+        // is the position before user enters candidate mode.
+        var caretInitial = self.caretInitial,
 
-        // If we are current inside candidate window
-        if (self[userInCandidateWindow] || (self[userInCandidateWindow] = self[waitForKeyup] && self.lastInputEvent[waitForKeyup])) {
-            self.end = caret.end;
+            // Caret position retrieved on previous input event
+            // is the position before the character is inserted
+            caretBefore = self.caretBefore,
+
+            // Caret position retrieved on current input event
+            // is the position after the character is inserted.
+            caretAfter  = self.caretAfter = textarea.caret();
+
+            // We need the caretBefore & caretAfter from the last
+            // input event to determine the range of text replaced.
+            lastCaret = self.lastCaret,
+
+            marker = self.getMarkerAt(caretBefore.start);
+
+        
+        var length = textarea.val().length;
+
+        if (self.lengthBefore == length) {
+
+            marker.val(self.substring(marker.start, marker.end));
+
+        } else {
+            // To retrieve the range of text to be replaced
+            var rangeStart = caretInitial.start,
+                rangeEnd   = caretAfter.end,
+
+                // To retrieve the text inserted,
+                // take the caret start position on the first keydown event as the text start index,
+                // take the caret end position on the last input event as the text end index.
+                textStart  = caretBefore.start,
+                textEnd    = caretAfter.end,
+                text = 
+                    // If textStart===textEnd, a character was removed.
+                    textEnd===textStart ? false :
+                    // Else we extract the text that was inserted.
+                    self.substring(textStart, textEnd);
+
+            // If we are current inside candidate window
+            if (self[userInCandidateWindow] || (self[userInCandidateWindow] = self[waitForKeyup] && lastCaret[waitForKeyup])) {
+
+                // secondLastInput.caretEnd - firstInput.caretEnd + 1 = number of characters types (range to be used)
+                // rangeStart
+                // if (caretAfter.end - lastCaret.end) {
+                // }
+            }
+
+            self.insert(text.charCodeAt(0), rangeStart, rangeEnd);
         }
 
+        console.log("caretInitial", caretInitial);
+        console.log("caretBefore" , caretBefore);
+        console.log("caretAfter"  , caretAfter);        
+        console.log("range"       , rangeStart, rangeEnd);
+        console.log("text"        , textStart, textEnd, text);
+
         // first & last input = number of characters inserted
-        // secondLastInput.caretEnd - firstInput.caretEnd + 1 = number of characters types (range to be used)
-        // lastInput.caretEnd - firstInput.caretEnd + 1 = number of characters inserted (if 0, one character removed)
 
-        var caret = textarea.caret(),
-            val = textarea.val();
-
-        console.log("INPUT", textarea.caret(), arguments);
+        // Store current create as last caret
+        self.lastCaret = {
+            before      : caretBefore,
+            after       : caretAfter,
+            waitForKeyup: self[waitForKeyup]
+        };
     },    
 
     "{textarea} keyup": function(textarea, event) {
 
         // Every keydown event without keyup
         self[waitForKeyup] = false;
-        self.lastInputEvent[waitForKeyup] = false;
+        self.lastCaret[waitForKeyup] = false;
 
 
         console.log("keyup", event.which || event.keyCode, textarea.caret());
