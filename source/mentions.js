@@ -472,7 +472,7 @@ function(self){ return {
                 // null      - don't add anything to the result list
                 // undefined - add the same marker object to the result list
                 // value     - add the value to the result list
-                if (ret!==null) result.push(ret===undefined ? ret : marker);
+                if (ret!==null && ret!==false) result.push(ret===undefined ? ret : marker);
 
                 return ret; // if ret is false, the parent loop will stop
             };
@@ -554,10 +554,10 @@ function(self){ return {
         if (start===undefined) return;
 
         return self.forEachMarker(function(){
-            return (start >= this.start) ? (this.end < end) ? this : false : null;
+
+            return (this.start > end) ? false : (this.end < start) ? null : this;
         });
     },
-
 
     triggered: null,
 
@@ -583,6 +583,7 @@ function(self){ return {
 
             // Insert character
             marker.insert(string, pos, options);
+            // console.log('ins', string, pos);
 
             // If marker is a text, and the marker after is a block
             // ensure the character is added to the end of the text.
@@ -596,6 +597,10 @@ function(self){ return {
 
             // Identify affected markers
 
+            // sconsole.dir(markers);
+
+            console.log(markers);
+
             if (markers.length==1) {
 
                 var marker = markers[0];
@@ -608,7 +613,8 @@ function(self){ return {
 
                 marker.val(newval);
 
-                console.log(val, newval);
+                console.log(val);
+                console.log(newval);
 
             } else {
 
@@ -620,6 +626,13 @@ function(self){ return {
 
         self.insert(false, start, end);
     },
+
+
+    candidateWindow: false,
+
+    substring: function(start, end) {
+        return self._textarea.value.substring(start, end);
+    },    
 
     "{textarea} beforecut": function() {
 
@@ -639,9 +652,7 @@ function(self){ return {
     "{textarea} paste": function() {
 
         console.log("PASTE", arguments);
-    },
-
-    candidateWindow: false,
+    },    
 
     "{textarea} keydown": function(textarea, event) {
 
@@ -656,20 +667,10 @@ function(self){ return {
 
         self.caretInitial = self.caretBefore = caret;
 
-        // Update start & end
-        // self.start = caret.start;
-        // self.end   = caret.end;
-
         console.log("keydown", event.which || event.keyCode, textarea.caret());
 
-        // Listen to backspace during keydown because
-        // it is not fired on keypress in Chrome.
-        if (event.keyCode===8) {
-
-            self.remove(caret.start, caret.end);
-
-            // Ignore input event when removing characters
-            self[skipInput] = true;
+        if (event.keyCode===8 && $.IE < 10) {
+            self.overlay().css('opacity', 0);
         }
 
         self.candidateWindow = true;
@@ -685,25 +686,51 @@ function(self){ return {
         
         // Keypress do not get triggered when a user selects an
         // accented character from the candidate window in Chrome + OSX.
-
         return;
 
-        var charCode = $.getChar(event);
+        // var charCode = $.getChar(event);
 
-        if (charCode===false) return;
+        // if (charCode===false) return;
 
         // If keypress was called, input event should be ignored to speed up character insertion.
-        self.skipInput = true;
+        // self.skipInput = true;
 
-        var caret = self.caretBefore;
+        // var caret = self.caretBefore;
 
-        self.insert(charCode, caret.start, caret.end);
+        // self.insert(charCode, caret.start, caret.end);
 
-        console.log("keypress", charCode, caret);
+        // console.log("keypress", charCode, caret);
     },
 
-    substring: function(start, end) {
-        return self._textarea.value.substring(start, end);
+    "{textarea} input": function(textarea) {
+
+        if (self[skipInput]) return self[skipInput] = false;
+
+        self.reflect();
+    },
+
+    "{textarea} keyup": function(textarea, event) {
+
+        self.candidateWindow = false;
+
+        // Listen to backspace during keydown because
+        // it is not fired on input/keypress on IE9.
+        if (event.keyCode===8 && $.IE < 10) {
+
+            var caretBefore = self.caretBefore,
+                caretAfter  = self.caretAfter = self.textarea().caret();
+
+            console.log(caretAfter.end, caretBefore.start);
+
+            self.remove(caretAfter.end, caretBefore.start);
+
+            self.overlay().css('opacity', 1);
+        }
+
+        console.log("keyup", event.which || event.keyCode, textarea.caret());
+
+        self.inspect();
+        return;
     },
 
     lengthBefore: null,
@@ -714,9 +741,7 @@ function(self){ return {
 
     caretAfter: null,
 
-    "{textarea} input": function(textarea) {
-
-        if (self[skipInput]) return self[skipInput] = false;
+    reflect: function() {
 
         // When a person presses keydown and releases, keyup will be triggered, e.g.
         //
@@ -764,7 +789,7 @@ function(self){ return {
 
             // Caret position retrieved on current input event
             // is the position after the character is inserted.
-            caretAfter  = self.caretAfter = textarea.caret();
+            caretAfter  = self.caretAfter = self.textarea().caret();
 
         console.log("caretInitial", caretInitial);
         console.log("caretBefore" , caretBefore);
@@ -788,10 +813,21 @@ function(self){ return {
 
             // If user is finalizing the selection from the candidate window
             if (caretAfter.end < caretBefore.start) {
-                var rangeStart = caretInitial.start,
-                    rangeEnd   = caretBefore.end,
-                    textStart  = caretInitial.start,
-                    textEnd    = caretAfter.end;
+
+                if (caretInitial.start >= caretBefore.start) {
+
+                    var rangeStart = caretBefore.start,
+                        rangeEnd   = caretBefore.end,
+                        textStart  = caretBefore.start,
+                        textEnd    = caretBefore.end;
+
+                } else {
+
+                    var rangeStart = caretInitial.start,
+                        rangeEnd   = caretBefore.end,
+                        textStart  = caretInitial.start,
+                        textEnd    = caretAfter.end;
+                }
 
             // If user is inserting text as usual
             } else {
@@ -805,13 +841,13 @@ function(self){ return {
                 // If user removed text, textStart & textEnd will be identical.
                 textEnd===textStart ? false :
                 // If user inserted text, extract text.
-                wholeText.substring(textStart, textEnd);            
+                wholeText.substring(textStart, textEnd);
 
             // Insert text
             self.insert(text, rangeStart, rangeEnd);
      
-            console.log("range"       , rangeStart, rangeEnd);
-            console.log("text"        , textStart, textEnd, text);
+            console.log("range", rangeStart, rangeEnd);
+            console.log("text" , textStart, textEnd, text);
         }
 
         // Remember the length of the current text content
@@ -822,16 +858,6 @@ function(self){ return {
         self.caretBefore = self.caretAfter;
 
         console.log('----');
-    },
-
-    "{textarea} keyup": function(textarea, event) {
-
-        self.candidateWindow = false;
-
-        console.log("keyup", event.which || event.keyCode, textarea.caret());
-
-        self.inspect();
-        return;
     }
 
 }});
