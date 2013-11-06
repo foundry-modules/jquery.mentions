@@ -257,6 +257,16 @@ $.extend(Marker.prototype, {
         }
     },
 
+    replace: function(str, start, end) {
+
+        var text = this.text,
+            val = text.nodeValue;
+
+        if (str===false) str = '';
+
+        return text.nodeValue = val.substring(0, start) + str + val.slice(end);
+    },
+
     toTextMarker: function() {
 
         var marker = this,
@@ -566,7 +576,7 @@ function(self){ return {
         return self.options.triggers[triggerKey || self.triggered];
     },
 
-    insert: function(string, start, end) {
+    insert: function(str, start, end) {
 
         // TODO: Ability to listen to strings
 
@@ -582,40 +592,21 @@ function(self){ return {
                 options = self.getTrigger(marker.block) || {};
 
             // Insert character
-            marker.insert(string, pos, options);
-            // console.log('ins', string, pos);
+            marker.insert(str, pos, options);
 
             // If marker is a text, and the marker after is a block
             // ensure the character is added to the end of the text.
-            
-            // If marker 
 
         // If we are replacing a range of characters
         } else {
 
+            // Identify affected markers
             var markers = self.getMarkersBetween(start, end);
 
-            // Identify affected markers
-
-            // sconsole.dir(markers);
-
-            console.log(markers);
-
+            // If we're working within a single marker
             if (markers.length==1) {
-
                 var marker = markers[0];
-
-                if (string===false) string = '';
-
-                var val = marker.text.nodeValue;
-
-                var newval = val.substring(0,start) + string + val.slice(end);
-
-                marker.val(newval);
-
-                console.log(val);
-                console.log(newval);
-
+                marker.replace(str, start - marker.start, end - marker.end);
             } else {
 
             }
@@ -720,9 +711,7 @@ function(self){ return {
             var caretBefore = self.caretBefore,
                 caretAfter  = self.caretAfter = self.textarea().caret();
 
-            console.log(caretAfter.end, caretBefore.start);
-
-            self.remove(caretAfter.end, caretBefore.start);
+            self.remove(caretAfter.end, caretBefore.end);
 
             self.overlay().css('opacity', 1);
         }
