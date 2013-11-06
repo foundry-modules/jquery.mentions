@@ -600,6 +600,8 @@ function(self){ return {
 
                 var marker = markers[0];
 
+                if (string===false) string = '';
+
                 var val = marker.text.nodeValue;
 
                 var newval = val.substring(0,start) + string + val.slice(end);
@@ -607,8 +609,6 @@ function(self){ return {
                 marker.val(newval);
 
                 console.log(val, newval);
-
-
 
             } else {
 
@@ -768,7 +768,7 @@ function(self){ return {
 
         console.log("caretInitial", caretInitial);
         console.log("caretBefore" , caretBefore);
-        console.log("caretAfter"  , caretAfter);  
+        console.log("caretAfter"  , caretAfter);
 
         // If input event was triggered with a change in the text content,
         // but the length of the text content is the same length as before,
