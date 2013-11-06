@@ -618,7 +618,7 @@ function(self){ return {
 
     remove: function(start, end) {
 
-        self.insert(8, start, end);
+        self.insert(false, start, end);
     },
 
     "{textarea} beforecut": function() {
@@ -641,22 +641,16 @@ function(self){ return {
         console.log("PASTE", arguments);
     },
 
-    userInCandidateWindow: false,
+    candidateWindow: false,
 
     "{textarea} keydown": function(textarea, event) {
 
-        // If keyup event did not fire after a keydown event,
-        // this means user has entered candidate window mode,
-        // and we should not do anything.
-        if (self.waitForKeyup) {
-            // Scenario 2: Multiple keydown event was triggered without keyup.
-            // See "{textarea} input" for details.
-            self.userInCandidateWindow = true;
-            return;
-        }
+        // If keydown event has been fired multiple times
+        // this might mean the user has entered candidate
+        // window and we should not do anything.
+        if (self.candidateWindow) return;
 
         self.lengthBefore = textarea.val().length;
-        console.log('lengthBefore', self.lengthBefore);
 
         var caret = textarea.caret();
 
@@ -671,10 +665,14 @@ function(self){ return {
         // Listen to backspace during keydown because
         // it is not fired on keypress in Chrome.
         if (event.keyCode===8) {
+
             self.remove(caret.start, caret.end);
+
+            // Ignore input event when removing characters
+            self[skipInput] = true;
         }
 
-        self.waitForKeyup = true;
+        self.candidateWindow = true;
     },
 
     // The role of inserting characters is given to keypress
@@ -716,12 +714,6 @@ function(self){ return {
 
     caretAfter: null,
 
-    lastCaret: {
-        before: null,
-        after: null,
-        waitForKeyup: false
-    },
-
     "{textarea} input": function(textarea) {
 
         if (self[skipInput]) return self[skipInput] = false;
@@ -760,9 +752,11 @@ function(self){ return {
         // by detecting if the input event was triggered more than
         // once without the occurence of keyup event between them.
 
-        // Caret position retrieved on keydown event
-        // is the position before user enters candidate mode.
-        var caretInitial = self.caretInitial,
+        var wholeText = self._textarea.value,
+
+            // Caret position retrieved on keydown event
+            // is the position before user enters candidate mode.
+            caretInitial = self.caretInitial,
 
             // Caret position retrieved on previous input event
             // is the position before the character is inserted
@@ -772,91 +766,71 @@ function(self){ return {
             // is the position after the character is inserted.
             caretAfter  = self.caretAfter = textarea.caret();
 
-            // We need the caretBefore & caretAfter from the last
-            // input event to determine the range of text replaced.
-            lastCaret = self.lastCaret,
-
-            marker = self.getMarkerAt(caretBefore.start);
-
-        
-        var length = textarea.val().length;
-
-        if (self.lengthBefore == length) {
-
-            marker.val(self.substring(marker.start, marker.end));
-
-        } else {
-            // To retrieve the range of text to be replaced
-            var rangeStart = caretBefore.start,
-                rangeEnd   = caretBefore.end,
-
-                // To retrieve the text inserted,
-                // take the caret start position on the first keydown event as the text start index,
-                // take the caret end position on the last input event as the text end index.
-                textStart  = caretBefore.start,
-                textEnd    = caretAfter.end,
-                text = 
-                    // If textStart===textEnd, a character was removed.
-                    textEnd===textStart ? false :
-                    // Else we extract the text that was inserted.
-                    self.substring(textStart, textEnd);
-
-            // If we are current inside candidate window
-            if (self[userInCandidateWindow] || (self[userInCandidateWindow] = self[waitForKeyup] && lastCaret[waitForKeyup])) {
-
-                console.log("here");
-                rangeStart = caretInitial.start;
-                rangeEnd = lastCaret.after.end;
-
-                // secondLastInput.caretEnd - firstInput.caretEnd + 1 = number of characters types (range to be used)
-                // rangeStart
-                // if (caretAfter.end - lastCaret.end) {
-                // }
-
-// caretInitial Object { start=1, end=1}
-// caretBefore Object { start=1, end=1}
-// caretAfter Object { start=4, end=4}
-// range 1 1
-// text 1 4 a h
-
-
-
-            }
-
-            self.insert(text, rangeStart, rangeEnd);
-        }
-
-        // hold character + press number needs this
-        self.lengthBefore = length;
-
         console.log("caretInitial", caretInitial);
         console.log("caretBefore" , caretBefore);
-        console.log("caretAfter"  , caretAfter);        
-        console.log("range"       , rangeStart, rangeEnd);
-        console.log("text"        , textStart, textEnd, text);
+        console.log("caretAfter"  , caretAfter);  
 
-        // first & last input = number of characters inserted
+        // If input event was triggered with a change in the text content,
+        // but the length of the text content is the same length as before,
+        // it is impossible to tell what has changed, so we replace the entire
+        // text in the marker where the caret is at. This may happen when user
+        // holds a chracter + presses a number to select a character from
+        // the candidate window OR when user navigates between characters
+        // using arrow keys within the candidate window.
+        if (self.lengthBefore == wholeText.length) {
 
-        // Store current create as last caret
-        self.lastCaret = {
-            before      : caretBefore,
-            after       : caretAfter,
-            waitForKeyup: self[waitForKeyup]
-        };
-    },    
+            var marker = self.getMarkerAt(caretBefore.start),
+                text = wholeText.substring(marker.start, marker.end);
+
+            marker.val(text);
+
+        } else {
+
+            // If user is finalizing the selection from the candidate window
+            if (caretAfter.end < caretBefore.start) {
+                var rangeStart = caretInitial.start,
+                    rangeEnd   = caretBefore.end,
+                    textStart  = caretInitial.start,
+                    textEnd    = caretAfter.end;
+
+            // If user is inserting text as usual
+            } else {
+                var rangeStart = caretBefore.start,
+                    rangeEnd   = caretBefore.end,
+                    textStart  = caretBefore.start,
+                    textEnd    = caretAfter.end;
+            }
+
+            var text = 
+                // If user removed text, textStart & textEnd will be identical.
+                textEnd===textStart ? false :
+                // If user inserted text, extract text.
+                wholeText.substring(textStart, textEnd);            
+
+            // Insert text
+            self.insert(text, rangeStart, rangeEnd);
+     
+            console.log("range"       , rangeStart, rangeEnd);
+            console.log("text"        , textStart, textEnd, text);
+        }
+
+        // Remember the length of the current text content
+        self.lengthBefore = self._textarea.value.length;
+
+        // Set caretBefore as current caret
+        // This is used to track text range when exiting candidate window
+        self.caretBefore = self.caretAfter;
+
+        console.log('----');
+    },
 
     "{textarea} keyup": function(textarea, event) {
 
-        // Every keydown event without keyup
-        self[waitForKeyup] = false;
-        self.lastCaret[waitForKeyup] = false;
-
+        self.candidateWindow = false;
 
         console.log("keyup", event.which || event.keyCode, textarea.caret());
 
         self.inspect();
-
-
         return;
     }
 
