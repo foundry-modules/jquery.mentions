@@ -129,6 +129,9 @@ $.template("mentions/inspector", '<div class="mentions-inspector" data-mentions-
 */
 
 var Marker = function(options) {
+
+    this.mutable = true;
+
     $.extend(this, options);
 }
 
@@ -267,7 +270,12 @@ $.extend(Marker.prototype, {
         return text.nodeValue = val.substring(0, start) + str + val.slice(end);
     },
 
-    toTextMarker: function() {
+    remove: function() {
+
+        this.parent.removeChild(this.block || this.text);
+    },  
+
+    toTextMarker: function(normalize) {
 
         var marker = this,
             block  = marker.block,
@@ -275,23 +283,22 @@ $.extend(Marker.prototype, {
 
         if (!block) return;
 
-        var nodes = block.childNodes,
-            i = nodes.length;
+        // Move the text node out and 
+        // place it before the next marker.
+        parent.insertBefore(marker.text, block.nextSibling);
 
-        while(i--) parent.insertBefore(nodes[i], block.nextSibling);
-
+        // Remove the block node
         parent.removeChild(block);
-
-        parent.normalize();
-
         delete marker.block;
+
+        // Normalizing will join 2 separated
+        // text nodes together forming a single marker.
+        if (normalize) parent.normalize();
 
         // TODO: Trigger markerDestroy event.
     },
 
     toBlockMarker: function() {
-
-
 
     }
 });
@@ -404,6 +411,11 @@ function(self){ return {
         self.inspector().hide();
     },
 
+    "{inspector} dblclick": function() {
+
+        self.textarea().toggle();
+    },
+
     inspect: $.debounce(function() {
 
         // Selection
@@ -489,7 +501,7 @@ function(self){ return {
 
         while (node = nodes[i++]) {
 
-            var text, block, end, length,
+            var text, block=null, end, length,
                 nodeType = node.nodeType,
                 nodeName = node.nodeName;
 
@@ -506,6 +518,8 @@ function(self){ return {
                 overlay.removeChild(node);
                 continue;
             }
+
+            console.log(node, block);
 
             // Create marker object
             var marker = new Marker({
@@ -597,20 +611,59 @@ function(self){ return {
             // If marker is a text, and the marker after is a block
             // ensure the character is added to the end of the text.
 
-        // If we are replacing a range of characters
+            return marker;
+            // If we are replacing a range of characters
+        }
+
+        // Identify affected markers
+        var markers = self.getMarkersBetween(start, end), marker, length = markers.length;
+
+        // If there are no marker, top.
+        if (length < 1) return;
+
+        // If we're modifying a single marker
+        if (length==1) {
+            marker = markers[0];
+            marker.replace(str, start - marker.start, end - marker.start);
+            return marker;
+        }
+
+        // If we're modifying multiple markers
+        var i = length - 1,
+            marker = markers[i];
+
+        // Deal with the last marker first
+
+        // Convert block marker into text marker first
+        if (marker.block) marker.toTextMarker();
+
+        // If this marker is mutable (all text markers are mutable)
+        if (marker.mutable) {
+
+            // Remove characters from text marker
+            marker.replace("", 0, end - marker.start);
+
+        // If this marker is not mutable
         } else {
 
-            // Identify affected markers
-            var markers = self.getMarkersBetween(start, end);
+            // Remove remaining string from textarea
+            var textarea = self._textarea;
+                wholeText = textarea.value;
 
-            // If we're working within a single marker
-            if (markers.length==1) {
-                var marker = markers[0];
-                marker.replace(str, start - marker.start, end - marker.end);
-            } else {
+            textarea.value = wholeText.substring(0, end) + wholeText.slice(marker.end);
 
-            }
+            // Remove marker
+            marker.remove();
         }
+
+        // Remove all markers in between
+        while ((marker = markers[--i]) && i > 0) marker.remove();
+
+        // Insert characters in the last marker
+        marker.replace(str, start - marker.start, end - marker.start);
+
+        // Normalize all text markers
+        self._overlay.normalize();
     },
 
     remove: function(start, end) {
@@ -671,6 +724,12 @@ function(self){ return {
     // because keypress event will not trigger when non-a
     "{textarea} keypress": function(textarea, event) {
 
+        console.log('keypress');
+
+        // if (self.candidateWindow) {
+        //     self.delayInput = true;
+        // }
+
         // FF fires keypress on backspace, while Chrome & IE doesn't.
         // We normalize this behaviour by not doing anything on backspace.
         if (event.keyCode===8) return;
@@ -695,7 +754,9 @@ function(self){ return {
 
     "{textarea} input": function(textarea) {
 
-        if (self[skipInput]) return self[skipInput] = false;
+        // if (self[skipInput]) return self[skipInput] = false;
+
+        // if (self.delayInput) return;
 
         self.reflect();
     },
@@ -714,6 +775,10 @@ function(self){ return {
             self.remove(caretAfter.end, caretBefore.end);
 
             self.overlay().css('opacity', 1);
+
+            if (self.delayInput) {
+                self.reflect();
+            }
         }
 
         console.log("keyup", event.which || event.keyCode, textarea.caret());
