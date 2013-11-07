@@ -134,8 +134,6 @@ $.template("mentions/inspector", '<div class="mentions-inspector" data-mentions-
 
 var Marker = function(options) {
 
-    this.mutable = true;
-
     $.extend(this, options);
 }
 
@@ -183,8 +181,11 @@ $.extend(Marker.prototype, {
         }
 
         if (mutable) {
-            text.nodeValue = prefix + chunk;
-            nodes.push(block || text);
+            // Update text value
+            (text.nodeValue = prefix + chunk).length > 0 ?
+                nodes.push(block || text) :
+                // If text is empty, just remove marker
+                marker.remove();
         } else {
             marker.remove();
         }
@@ -362,7 +363,11 @@ function(self){ return {
 
         while (node = nodes[i++]) {
 
-            var text, block=null, end, length,
+            var text,
+                block = null,
+                end,
+                length,
+                mutable = true,
                 nodeType = node.nodeType,
                 nodeName = node.nodeName;
 
@@ -373,6 +378,7 @@ function(self){ return {
             // then test if node is <br/>, create a detached text node contaning a line break,
             } else if ((block = node) && nodeName=="BR") {
                 text = document.createTextNode("\n");
+                mutable = false;
             // if this is an invalid node, e.g. node not element, node not span, span has no text child node,
             // remove code from overlay and skip this loop.
             } else if (nodeType!==1 || nodeName!=="SPAN" || !(text = node.childNodes[0]) || text.nodeType!==3) {
@@ -389,7 +395,8 @@ function(self){ return {
                 text  : text,
                 block : block,
                 parent: overlay,
-                before: before
+                before: before,
+                mutable: mutable
             });
 
             // If this is the second iteration, decorate the marker the after property
@@ -423,7 +430,7 @@ function(self){ return {
 
             // If position is inside current node,
             // stop and return marker.
-            if (pos >= this.start && pos < this.end) {
+            if (pos >= this.start && pos <= this.end) {
                 marker = this;
                 return false;
             }
