@@ -175,8 +175,6 @@ $.extend(Marker.prototype, {
             br     = (newline) ? document.createElement("BR") : null,
             nbsp   = document.createTextNode("\u00a0"); // String.fromCharCode(160)
 
-        // console.log(start, marker.start);
-        // console.log(newline, start===marker.start, overlay, br, block || text); 
         // We use different text manipulation techniques for
         // different text change cases to achieve better speed.            
 
@@ -449,8 +447,6 @@ function(self){ return {
                 continue;
             }
 
-            console.log(node, block);
-
             // Create marker object
             var marker = new Marker({
                 index : i - 1,
@@ -652,11 +648,11 @@ function(self){ return {
 
         self.lengthBefore = textarea.val().length;
 
-        var caret = textarea.caret();
+        var caret = 
+            self.caretInitial = 
+            self.caretBefore = textarea.caret();
 
-        self.caretInitial = self.caretBefore = caret;
-
-        console.log("keydown", event.which || event.keyCode, textarea.caret());
+        console.log("keydown", event.which, caret);
 
         if (event.keyCode===8 && $.IE < 10) {
             self.overlay().css('opacity', 0);
@@ -669,8 +665,6 @@ function(self){ return {
     // it will trigger on well-formed characters.
     "{textarea} keypress": function(textarea, event) {
 
-        console.log('keypress');
-
         // if (self.candidateWindow) {
         //     self.delayInput = true;
         // }
@@ -678,25 +672,11 @@ function(self){ return {
         // FF fires keypress on backspace, while Chrome & IE doesn't.
         // We normalize this behaviour by not doing anything on backspace.
         if (event.keyCode===8) return;
-
-        // var charCode = $.getChar(event);
-
-        // if (charCode===false) return;
-
-        // If keypress was called, input event should be ignored to speed up character insertion.
-        // self.skipInput = true;
-
-        // var caret = self.caretBefore;
-
-        // self.insert(charCode, caret.start, caret.end);
-
-        // console.log("keypress", charCode, caret);
     },
 
     "{textarea} input": function(textarea) {
 
         // if (self[skipInput]) return self[skipInput] = false;
-
         // if (self.delayInput) return;
 
         self.reflect();
@@ -778,9 +758,9 @@ function(self){ return {
             // is the position after the character is inserted.
             caretAfter  = self.caretAfter = self.textarea().caret();
 
-        console.log("caretInitial", caretInitial);
-        console.log("caretBefore" , caretBefore);
-        console.log("caretAfter"  , caretAfter);
+            console.log("caretInitial", caretInitial);
+            console.log("caretBefore" , caretBefore);
+            console.log("caretAfter"  , caretAfter);
 
         // If input event was triggered with a change in the text content,
         // but the length of the text content is the same length as before,
@@ -931,91 +911,3 @@ function(self){ return {
     }
 
 }});
-
-$.getChar = function(e) {
-
-    // If CMD was pressed on mac
-    if (e.metaKey) return false;
-
-    /*** Convert to Char Code ***/
-    var code = e.which;
-    
-    //Ignore Shift Key events & arrows
-    var ignoredCodes = {
-        0: true,
-        16: true,
-        37: true,
-        38: true,
-        39: true,
-        40: true,
-        20: true,
-        17: true,
-        18: true,
-        91: true
-    };
-    
-    if(ignoredCodes[code] === true) {
-        return false;
-    }
-
-    // Return null for backspace
-    // if (code===8) return null;
-    
-    //These are special cases that don't fit the ASCII mapping
-    var exceptions = {
-        186: 59, // ;
-        187: 61, // =
-        188: 44, // ,
-        189: 45, // -
-        190: 46, // .
-        191: 47, // /
-        192: 96, // `
-        219: 91, // [
-        220: 92, // \
-        221: 93, // ]
-        222: 39 // '
-    };
-
-    if(exceptions[code] !== undefined) {
-        code = exceptions[code];
-    }
-    
-    var ch = String.fromCharCode(code);
-    
-    /*** Handle Shift ***/
-    if(e.shiftKey) {
-        var special = {
-            1: '!',
-            2: '@',
-            3: '#',
-            4: '$',
-            5: '%',
-            6: '^',
-            7: '&',
-            8: '*',
-            9: '(',
-            0: ')',
-            ',': '<',
-            '.': '>',
-            '/': '?',
-            ';': ':',
-            "'": '"',
-            '[': '{',
-            ']': '}',
-            '\\': '|',
-            '`': '~',
-            '-': '_',
-            '=': '+'
-        };
-
-        if(special[ch] !== undefined) {
-            ch = special[ch];
-        }
-    }
-    else {
-        ch = ch.toLowerCase();
-    }
-
-    // return ch;
-    return ch.charCodeAt(0);
-}
