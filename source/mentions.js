@@ -141,7 +141,7 @@ $.extend(Marker.prototype, {
     insert: function(str, start, end) {
 
         // Marker
-        var marker = this, 
+        var marker = this,
 
             // Text
             text    = marker.text,
@@ -149,6 +149,7 @@ $.extend(Marker.prototype, {
             prefix  = val.substring(0, start),
             suffix  = val.slice(end),
             mutable = marker.mutable,
+            newline = (str==newline),
 
             // Nodes
             parent  = marker.parent,
@@ -156,39 +157,33 @@ $.extend(Marker.prototype, {
             next    = block ? block.nextSibling : text.nextSibling,
 
             // Chunks
-            // Replace double space with one space + one nbsp
+            // Replace double space with one space +` one nbsp
             chunks = str.replace(/  /g, " " + nbsp).split(newline),
-            chunk  = null,
-            i      = chunks.length,
-            stop   = (mutable) ? 0 : -1,
-            nodes = [];
+            nodes  = [],
+            i      = chunks.length;
 
-        // If marker is mutable, we add the suffix at the final chunk
-        if (mutable) chunks[i-1] += suffix;
+        // If marker is mutable, we add the prefix/suffix to the first/last chunk.
+        if (mutable) {
+            chunks[0] = prefix + chunks[0];
+            chunks[i-1] += suffix;
+        }
 
-        while ((chunk = chunks[--i])!==undefined && i > stop)  {
+        while (--i) {
 
-            var node  = document.createTextNode(chunk),
-                br    = document.createElement("BR");
+            var node = document.createTextNode(chunks[i]),
+                br = document.createElement("BR");
 
             parent.insertBefore(node, next);
             parent.insertBefore(br, node);
-
             nodes.push(node);
             nodes.push(br);
 
             next = br;
         }
 
-        if (mutable) {
-            // Update text value
-            (text.nodeValue = prefix + chunk).length > 0 ?
-                nodes.push(block || text) :
-                // If text is empty, just remove marker
-                marker.remove();
-        } else {
-            marker.remove();
-        }
+        text.nodeValue = chunks[i];
+        mutable && marker.toTextMarker(false);
+        newline && parent.insertBefore(marker.block = document.createElement("BR"), next);
 
         // Trigger marker for post processing
         $(parent).trigger("markerInsert", [marker, nodes]);
@@ -212,7 +207,7 @@ $.extend(Marker.prototype, {
             block  = marker.block,
             parent = marker.parent;
 
-        if (!block) return;
+        if (!block) return marker;
 
         // Move the text node out and 
         // place it before the next marker.
@@ -227,6 +222,8 @@ $.extend(Marker.prototype, {
         normalize && parent.normalize();
 
         $(marker.parent).trigger("markerConvert", [this, "text", normalize]);
+
+        return marker;
     },
 
     toBlockMarker: function() {
