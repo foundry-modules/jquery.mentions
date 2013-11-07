@@ -5,8 +5,7 @@ var awaitingKeyup_ = "awaitingKeyup",
     waitForKeyup = "waitForKeyup",
     skipInput = "skipInput";
 
-var space   = / /g,
-    nbsp    = "\u00a0",
+var nbsp    = "\u00a0",
     newline = "\n";
 
 // TODO: Put this elsewhere
@@ -157,7 +156,8 @@ $.extend(Marker.prototype, {
             next    = block ? block.nextSibling : text.nextSibling,
 
             // Chunks
-            chunks = str.replace(space, nbsp).split(newline),
+            // Replace double space with one space + one nbsp
+            chunks = str.replace(/  /g, " " + nbsp).split(newline),
             chunk  = null,
             i      = chunks.length,
             stop   = (mutable) ? 0 : -1,
