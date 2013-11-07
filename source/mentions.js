@@ -393,86 +393,16 @@ function(self){ return {
         overlay.css('opacity', 1);
     },
 
-    showInspector: function() {
+    //--- Triggers ----//
 
-        // If inspector hasn't been created yet
-        if (self.inspector().length < 1) {
+    triggered: null,
 
-            // Create inspector and append to textfield
-            self.view.inspector()
-                .appendTo(self.element);
-        }
+    getTrigger: function(triggerKey) {
 
-        self.inspector().show();
-    },
+        return self.options.triggers[triggerKey || self.triggered];
+    },    
 
-    hideInspector: function() {
-
-        self.inspector().hide();
-    },
-
-    "{inspector} dblclick": function() {
-
-        self.textarea().toggle();
-    },
-
-    inspect: $.debounce(function() {
-
-        // Selection
-        var caret = self.textarea().caret();
-
-        self.selectionStart().val(caret.start);
-        self.selectionEnd().val(caret.end);
-        self.selectionLength().val(caret.end - caret.start);
-
-        // Trigger
-        var triggerKey = self.triggered;
-
-        if (triggerKey) {
-            var trigger = self.options.triggers[triggerKey];
-            self.triggerKey().val(triggerKey);
-            self.triggerType().val(trigger.type);
-            self.triggerBuffer().val(self.buffer);
-        } else {
-            self.triggerKey().val('');
-            self.triggerType().val('');
-            self.triggerBuffer().val('');
-        }
-
-        // Marker
-        var marker = self.getMarkerAt(caret.start);
-
-        if (marker) {
-            self.markerIndex().val(marker.index).data('marker', marker);
-            self.markerStart().val(marker.start);
-            self.markerEnd().val(marker.end);
-            self.markerLength().val(marker.length);
-            self.markerText().val(marker.text.nodeValue);
-        } else {
-            self.markerIndex().val('').data('marker', null);
-            self.markerStart().val('');
-            self.markerEnd().val('');
-            self.markerLength().val('');
-            self.markerText().val('');
-        }
-
-        // Block
-        var block = (marker || {}).block;
-
-        if (block) {
-            self.blockText().val(marker.text.nodeValue);
-            self.blockHtml().val($(block).clone().toHTML());
-            // TODO: Retrieve block type & value 
-        } else {
-            self.blockText().val('');
-            self.blockHtml().val('');
-        }
-
-    }, 25),
-
-    "{markerIndex} click": function(el) {
-        console.dir(el.data("marker"));
-    },
+    //--- Marker traversal ----//
 
     forEachMarker: function(callback) {
 
@@ -583,12 +513,7 @@ function(self){ return {
         });
     },
 
-    triggered: null,
-
-    getTrigger: function(triggerKey) {
-
-        return self.options.triggers[triggerKey || self.triggered];
-    },
+    //--- Marker/overlay/text manipulation ---//
 
     insert: function(str, start, end) {
 
@@ -678,11 +603,6 @@ function(self){ return {
         return marker;
     },
 
-    remove: function(start, end) {
-
-        self.insert(false, start, end);
-    },
-
     textareaInsert: function(str, start, end) {
 
         var textarea = self._textarea,
@@ -690,6 +610,16 @@ function(self){ return {
 
         return textarea.value = val.substring(0, start) + str + val.slice(end);
     },
+
+    //--- Key events & caret handling ---//
+
+    lengthBefore: null,
+
+    caretInitial: null,
+
+    caretBefore: null,
+
+    caretAfter: null,
 
     candidateWindow: false,
 
@@ -735,8 +665,8 @@ function(self){ return {
         self.candidateWindow = true;
     },
 
-    // The role of inserting characters is given to keypress
-    // because keypress event will not trigger when non-a
+    // Keypress event will not trigger when meta keys are pressed,
+    // it will trigger on well-formed characters.
     "{textarea} keypress": function(textarea, event) {
 
         console.log('keypress');
@@ -748,10 +678,6 @@ function(self){ return {
         // FF fires keypress on backspace, while Chrome & IE doesn't.
         // We normalize this behaviour by not doing anything on backspace.
         if (event.keyCode===8) return;
-        
-        // Keypress do not get triggered when a user selects an
-        // accented character from the candidate window in Chrome + OSX.
-        return;
 
         // var charCode = $.getChar(event);
 
@@ -787,7 +713,7 @@ function(self){ return {
             var caretBefore = self.caretBefore,
                 caretAfter  = self.caretAfter = self.textarea().caret();
 
-            self.remove(caretAfter.end, caretBefore.end);
+            self.insert('', caretAfter.end, caretBefore.end);
 
             self.overlay().css('opacity', 1);
 
@@ -801,14 +727,6 @@ function(self){ return {
         self.inspect();
         return;
     },
-
-    lengthBefore: null,
-
-    caretInitial: null,
-
-    caretBefore: null,
-
-    caretAfter: null,
 
     reflect: function() {
 
@@ -927,6 +845,89 @@ function(self){ return {
         self.caretBefore = self.caretAfter;
 
         console.log('----');
+    },
+
+    //--- Inspector ----//
+
+    showInspector: function() {
+
+        // If inspector hasn't been created yet
+        if (self.inspector().length < 1) {
+
+            // Create inspector and append to textfield
+            self.view.inspector()
+                .appendTo(self.element);
+        }
+
+        self.inspector().show();
+    },
+
+    hideInspector: function() {
+
+        self.inspector().hide();
+    },
+
+    "{inspector} dblclick": function() {
+
+        self.textarea().toggle();
+    },
+
+    inspect: $.debounce(function() {
+
+        // Selection
+        var caret = self.textarea().caret();
+
+        self.selectionStart().val(caret.start);
+        self.selectionEnd().val(caret.end);
+        self.selectionLength().val(caret.end - caret.start);
+
+        // Trigger
+        var triggerKey = self.triggered;
+
+        if (triggerKey) {
+            var trigger = self.options.triggers[triggerKey];
+            self.triggerKey().val(triggerKey);
+            self.triggerType().val(trigger.type);
+            self.triggerBuffer().val(self.buffer);
+        } else {
+            self.triggerKey().val('');
+            self.triggerType().val('');
+            self.triggerBuffer().val('');
+        }
+
+        // Marker
+        var marker = self.getMarkerAt(caret.start);
+
+        if (marker) {
+            self.markerIndex().val(marker.index).data('marker', marker);
+            self.markerStart().val(marker.start);
+            self.markerEnd().val(marker.end);
+            self.markerLength().val(marker.length);
+            self.markerText().val(marker.text.nodeValue);
+        } else {
+            self.markerIndex().val('').data('marker', null);
+            self.markerStart().val('');
+            self.markerEnd().val('');
+            self.markerLength().val('');
+            self.markerText().val('');
+        }
+
+        // Block
+        var block = (marker || {}).block;
+
+        if (block) {
+            self.blockText().val(marker.text.nodeValue);
+            self.blockHtml().val($(block).clone().toHTML());
+            // TODO: Retrieve block type & value 
+        } else {
+            self.blockText().val('');
+            self.blockHtml().val('');
+        }
+
+    }, 25),
+
+    "{markerIndex} click": function(el) {
+        console.dir(el.data("marker"));
     }
 
 }});
