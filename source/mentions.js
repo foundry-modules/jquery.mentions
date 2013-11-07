@@ -595,33 +595,34 @@ function(self){ return {
         // TODO: Ability to listen to strings
 
         // Get overlay
-        var overlay = self._overlay;
+        var overlay = self._overlay, marker;
 
-        // If we are inserting character
-        if (start===end) {
+        // If we are inserting character(s)
+        if (start===end || end===undefined) {
 
             // Get marker
-            var marker  = self.getMarkerAt(start),
-                pos     = start - marker.start,
+            marker = self.getMarkerAt(start),
                 options = self.getTrigger(marker.block) || {};
 
             // Insert character
-            marker.insert(str, pos, options);
+            marker.insert(str, start - marker.start, options);
 
             // If marker is a text, and the marker after is a block
             // ensure the character is added to the end of the text.
-
             return marker;
-            // If we are replacing a range of characters
         }
 
-        // Identify affected markers
-        var markers = self.getMarkersBetween(start, end), marker, length = markers.length;
+        // If we are replacing character(s)
 
-        // If there are no marker, top.
+        // Identify affected markers
+        var markers = self.getMarkersBetween(start, end),
+            length = markers.length;
+
+        // If there are no marker, stop.
         if (length < 1) return;
 
         // If we're modifying a single marker
+        // e.g. he*llo* --> he*y*
         if (length==1) {
             marker = markers[0];
             marker.replace(str, start - marker.start, end - marker.start);
@@ -629,41 +630,52 @@ function(self){ return {
         }
 
         // If we're modifying multiple markers
+        // e.g. he*llo [john] [do*e] --> he*xxx*e
+
+        // Deal with markers in reverse
         var i = length - 1,
             marker = markers[i];
 
-        // Deal with the last marker first
-
-        // Convert block marker into text marker first
+        // Convert block marker into text marker
+        // [doe] --> doe
+        // hello [john] [doe] --> hello [john] doe
         if (marker.block) marker.toTextMarker();
 
         // If this marker is mutable (all text markers are mutable)
         if (marker.mutable) {
 
             // Remove characters from text marker
+            // doe --> e
+            // hello [john] doe --> hello [john] e
             marker.replace("", 0, end - marker.start);
 
         // If this marker is not mutable
         } else {
 
             // Remove remaining string from textarea
-            var textarea = self._textarea;
-                wholeText = textarea.value;
-
-            textarea.value = wholeText.substring(0, end) + wholeText.slice(marker.end);
+            // doe --> (removed)
+            // hello [john] doe --> hello [john]
+            self.textareaInsert('', end, marker.end);
 
             // Remove marker
-            marker.remove();
+            marker.remove(); 
         }
 
         // Remove all markers in between
-        while ((marker = markers[--i]) && i > 0) marker.remove();
+        // [john] --> (removed)
+        // hello [john] --> hello
+        while ((marker = markers[--i]) && i > 0) {
+            marker.remove();
+        }
 
-        // Insert characters in the last marker
+        // Insert characters in the first marker
+        // hello -> hexxxe
         marker.replace(str, start - marker.start, end - marker.start);
 
         // Normalize all text markers
         self._overlay.normalize();
+
+        return marker;
     },
 
     remove: function(start, end) {
@@ -671,12 +683,15 @@ function(self){ return {
         self.insert(false, start, end);
     },
 
+    textareaInsert: function(str, start, end) {
+
+        var textarea = self._textarea,
+            val = textarea.value;
+
+        return textarea.value = val.substring(0, start) + str + val.slice(end);
+    },
 
     candidateWindow: false,
-
-    substring: function(start, end) {
-        return self._textarea.value.substring(start, end);
-    },    
 
     "{textarea} beforecut": function() {
 
