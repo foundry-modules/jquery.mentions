@@ -168,7 +168,7 @@ $.extend(Marker.prototype, {
         // If marker is mutable, we add the suffix at the final chunk
         if (mutable) chunks[i-1] += suffix;
 
-        while ((chunk = chunks[--i]) && i > stop)  {
+        while ((chunk = chunks[--i])!==undefined && i > stop)  {
 
             var node  = document.createTextNode(chunk),
                 br    = document.createElement("BR");
@@ -183,23 +183,26 @@ $.extend(Marker.prototype, {
         }
 
         if (mutable) {
-            text.nodeValue = prefix + chunk
+            text.nodeValue = prefix + chunk;
             nodes.push(block || text);
         } else {
             marker.remove();
         }
 
         // Trigger marker for post processing
-        $(marker.parent).trigger("markerInsert", [this, nodes]);
+        $(parent).trigger("markerInsert", [marker, nodes]);
     },
 
     remove: function() {
 
-        this.parent.removeChild(this.block || this.text);
+        var marker = this,
+            parent = marker.parent;
 
-        this.removed = true;
+        parent.removeChild(marker.block || marker.text);
 
-        $(marker.parent).trigger("markerRemove", [this]);
+        marker.removed = true;
+
+        $(parent).trigger("markerRemove", [marker]);
     },
 
     toTextMarker: function(normalize) {
@@ -495,8 +498,7 @@ function(self){ return {
             // Remove characters from text marker
             // doe --> e
             // hello [john] doe --> hello [john] e
-            offset = marker.start;
-            marker.insert("", 0, end - offset);
+            marker.insert("", 0, end - marker.start);
 
         // If this marker is not mutable
         } else {
@@ -519,8 +521,7 @@ function(self){ return {
 
         // Insert characters in the first marker
         // hello -> hexxxe
-        offset = marker.start;
-        marker.insert(str, start - offset, end - offset);
+        marker.insert(str, start - marker.start, marker.length);
 
         // Normalize all text markers
         self._overlay.normalize();
