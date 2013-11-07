@@ -760,6 +760,20 @@ function(self){ return {
         console.log('----');
     },
 
+    //--- Marker Events ----//
+
+    "{overlay} markerInsert": function(overlay, event, marker, nodes) {
+
+    },
+
+    "{overlay} markerRemove": function(overlay, event, marker) {
+
+    },
+
+    "{overlay} markerConvert": function(overlay, event, marker, type) {
+
+    },
+
     //--- Inspector ----//
 
     showInspector: function() {
