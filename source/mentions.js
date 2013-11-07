@@ -5,6 +5,10 @@ var awaitingKeyup_ = "awaitingKeyup",
     waitForKeyup = "waitForKeyup",
     skipInput = "skipInput";
 
+var space   = / /g,
+    nbsp    = "\u00a0",
+    newline = "\n";
+
 // TODO: Put this elsewhere
 $.fn.caret = function(start, end) {
 
@@ -137,141 +141,66 @@ var Marker = function(options) {
 
 $.extend(Marker.prototype, {
 
-    val: function(str) {
-        this.text.nodeValue = str;
-    },
-
-    prepend: function(charCode, options) {
-        this.insert(charCode, 0, options);
-    },
-
-    append: function(charCode, options) {
-        this.insert(charCode, this.end - this.start, options);
-    },
-
-    insert: function(str, pos, options) {
+    insert: function(str, start, end) {
 
         // Marker
-        var marker = this,
-
-            // Character
-            // char      = String(charCode),
-            backspace = str===false,
-            newline   = str==="\n",
-            space     = str===" ",
+        var marker = this, 
 
             // Text
-            text   = marker.text,
-            start  = 0,
-            end    = marker.end - marker.start,
-            val    = text.nodeValue,
+            text    = marker.text,
+            val     = text.nodeValue,
+            prefix  = val.substring(0, start),
+            suffix  = val.slice(end),
+            mutable = marker.mutable,
 
             // Nodes
-            parent = marker.parent,
-            block  = marker.block,
-            before = marker.before,
-            after  = marker.after,
-            next   = block ? block.nextSibling : text.nextSibling,
-            br     = (newline) ? document.createElement("BR") : null,
-            nbsp   = document.createTextNode("\u00a0"); // String.fromCharCode(160)
+            parent  = marker.parent,
+            block   = marker.block,
+            next    = block ? block.nextSibling : text.nextSibling,
 
-        // We use different text manipulation techniques for
-        // different text change cases to achieve better speed.            
+            // Chunks
+            chunks = str.replace(space, nbsp).split(newline),
+            chunk  = null,
+            i      = chunks.length,
+            stop   = (mutable) ? 0 : -1,
+            nodes = [];
 
-        // If cursor is at the start of a marker
-        if (pos===start) {
+        // If marker is mutable, we add the suffix at the final chunk
+        if (mutable) chunks[i-1] += suffix;
 
-            space && block ? 
+        while ((chunk = chunks[--i]) && i > stop)  {
 
-                // Add space to the beginning of the previous marker
-                before ? before.append(str, options) : 
+            var node  = document.createTextNode(chunk),
+                br    = document.createElement("BR");
 
-                // Add space text node before the marker
-                parent.insertBefore(nbsp, block)
+            parent.insertBefore(node, next);
+            parent.insertBefore(br, node);
 
-            // Prepend br tag
-            :newline ? parent.insertBefore(br, block || text)
+            nodes.push(node);
+            nodes.push(br);
 
-            // Remove last character from previous marker
-            :backspace ? before && before.append(str)
-
-            // Prepend character
-            :text.nodeValue = str + val;
-
-        // If cursor is at the end of a marker
-        } else if (pos===end) {
-
-            space && block ?
-
-                // Add space to the beginning of the next marker
-                after ? after.prepend(str, options)
-
-                // Add space text node after the marker
-                : parent.insertBefore(nbsp, next)
-
-            // Append br tag
-            : newline ? parent.insertBefore(br, next) 
-
-            // Remove last character
-            : backspace ? text.nodeValue = val.substr(start, end - 1) 
-
-            // Append character
-            : text.nodeValue = val + str; 
-            
-        // If cursor is in the middle of the marker
-        } else {
-
-            var rep;
-
-            newline ? 
-
-                // If this is a block marker
-                block ?
-
-                    // Original: <span>hey</span>
-                    // Result  : <span>h</span><br>ey
-                    options.mutable ? 
-                        parent.insertBefore(rep = text.splitText(pos), block) &&
-                        parent.insertBefore(br, rep)
-
-                    // Original: <span>hey</span>
-                    // Result : hey
-                    : marker.toTextMarker()
-
-                // Add br in between
-                // Original: h<br/>ey
-                : parent.insertBefore(br, text.splitText(pos))
-
-            // Remove character in between
-            // Original: hey
-            // Result  : h<br/>ey
-            : backspace ? text.nodeValue = val.substr(0, pos-1) + val.substr(pos, end)
-
-            // Append character in between
-            // Original: hey
-            // Result  : hley
-            : text.nodeValue = val.substr(0, pos) + str + val.substr(pos, end);
-
-            space && block && !options.allowSpace ? 
-                options.mutable ? parent.insertBefore(text.splitText(pos), next)
-                : marker.toTextMarker() : null;
+            next = br;
         }
-    },
 
-    replace: function(str, start, end) {
+        if (mutable) {
+            text.nodeValue = prefix + chunk
+            nodes.push(block || text);
+        } else {
+            marker.remove();
+        }
 
-        var text = this.text,
-            val = text.nodeValue;
-
-        if (str===false) str = '';
-
-        return text.nodeValue = val.substring(0, start) + str + val.slice(end);
+        // Trigger marker for post processing
+        $(marker.parent).trigger("markerInsert", [this, nodes]);
     },
 
     remove: function() {
 
         this.parent.removeChild(this.block || this.text);
-    },  
+
+        this.removed = true;
+
+        $(marker.parent).trigger("markerRemove", [this]);
+    },
 
     toTextMarker: function(normalize) {
 
@@ -291,13 +220,14 @@ $.extend(Marker.prototype, {
 
         // Normalizing will join 2 separated
         // text nodes together forming a single marker.
-        if (normalize) parent.normalize();
+        normalize && parent.normalize();
 
-        // TODO: Trigger markerDestroy event.
+        $(marker.parent).trigger("markerConvert", [this, "text", normalize]);
     },
 
     toBlockMarker: function() {
 
+        $(marker.parent).trigger("markerConvert", [this, "block", normalize]);
     }
 });
 
@@ -513,24 +443,17 @@ function(self){ return {
 
     insert: function(str, start, end) {
 
-        // TODO: Ability to listen to strings
-
-        // Get overlay
-        var overlay = self._overlay, marker;
+        var marker, offset;
 
         // If we are inserting character(s)
         if (start===end || end===undefined) {
 
-            // Get marker
-            marker = self.getMarkerAt(start),
-                options = self.getTrigger(marker.block) || {};
+            // Get marker & offset
+            marker = self.getMarkerAt(start);
+            offset = marker.start;
 
             // Insert character
-            marker.insert(str, start - marker.start, options);
-
-            // If marker is a text, and the marker after is a block
-            // ensure the character is added to the end of the text.
-            return marker;
+            return marker.insert(str, start - offset, end - offset);
         }
 
         // If we are replacing character(s)
@@ -545,9 +468,13 @@ function(self){ return {
         // If we're modifying a single marker
         // e.g. he*llo* --> he*y*
         if (length==1) {
+
+            // Get marker & offset
             marker = markers[0];
-            marker.replace(str, start - marker.start, end - marker.start);
-            return marker;
+            offset = marker.start;
+
+            // Insert character
+            return marker.insert(str, start - offset, end - offset);
         }
 
         // If we're modifying multiple markers
@@ -568,7 +495,8 @@ function(self){ return {
             // Remove characters from text marker
             // doe --> e
             // hello [john] doe --> hello [john] e
-            marker.replace("", 0, end - marker.start);
+            offset = marker.start;
+            marker.insert("", 0, end - offset);
 
         // If this marker is not mutable
         } else {
@@ -576,7 +504,7 @@ function(self){ return {
             // Remove remaining string from textarea
             // doe --> (removed)
             // hello [john] doe --> hello [john]
-            self.textareaInsert('', end, marker.end);
+            self.textareaInsert("", end, marker.length);
 
             // Remove marker
             marker.remove(); 
@@ -591,7 +519,8 @@ function(self){ return {
 
         // Insert characters in the first marker
         // hello -> hexxxe
-        marker.replace(str, start - marker.start, end - marker.start);
+        offset = marker.start;
+        marker.insert(str, start - offset, end - offset);
 
         // Normalize all text markers
         self._overlay.normalize();
@@ -693,7 +622,7 @@ function(self){ return {
             var caretBefore = self.caretBefore,
                 caretAfter  = self.caretAfter = self.textarea().caret();
 
-            self.insert('', caretAfter.end, caretBefore.end);
+            self.insert("", caretAfter.end, caretBefore.end);
 
             self.overlay().css('opacity', 1);
 
@@ -783,10 +712,9 @@ function(self){ return {
 
                 if (caretInitial.start >= caretBefore.start) {
 
-                    var rangeStart = caretBefore.start,
-                        rangeEnd   = caretBefore.end,
-                        textStart  = caretBefore.start,
-                        textEnd    = caretBefore.end;
+                    var rangeStart = caretAfter.end,
+                        rangeEnd   = caretBefore.start,
+                        textStart = textEnd = null;
 
                 } else {
 
@@ -806,7 +734,7 @@ function(self){ return {
 
             var text = 
                 // If user removed text, textStart & textEnd will be identical.
-                textEnd===textStart ? false :
+                textEnd===textStart ? "" :
                 // If user inserted text, extract text.
                 wholeText.substring(textStart, textEnd);
 
