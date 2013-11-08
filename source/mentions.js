@@ -157,7 +157,7 @@ $.extend(Marker.prototype, {
             next    = block ? block.nextSibling : text.nextSibling,
 
             // Chunks
-            // Replace double space with one space +` one nbsp
+            // Replace double space with one space + one nbsp
             chunks = str.replace(/  /g, " " + nbsp).split(newline),
             nodes  = [],
             i      = chunks.length;
@@ -543,6 +543,40 @@ function(self){ return {
 
     //--- Key events & caret handling ---//
 
+    /*
+    List of input patterns to test:
+
+    1. Holding arrow key + pressing another character.
+
+    2. Select a range of characters (covering single/multiple marker)
+       - and press any key
+       - and press enter
+       - and press backspace
+
+    3. Typing accented character.
+       Hold a key until candidate window shows up, then:
+       - Press a number
+       - Release key, then press a number
+       - Navigate using arrow keys
+       - Press enter to select a character
+       - Click on a candidate to select a character
+       - Press backspace until candidate window dissappears
+
+    4. Typing romanized-to-unicode (Chinese/Japanese/Arabian/etc) characters.
+       Type multiple characters in the candidate window, then proceed with
+       the next course of action at test no. 3.
+
+    5. Pressing enter continously to create multiple newlines:
+       - at the beginning of the textarea
+       - at the middle of marker/text
+       - at the end of textarea
+       then:
+       - enter a key at the newline
+       - press backspace to remove those newlines
+       - select a range of newlines, then proceed with
+         the next course of action at test no. 2.
+    */
+
     lengthBefore: null,
 
     caretInitial: null,
@@ -551,7 +585,7 @@ function(self){ return {
 
     caretAfter: null,
 
-    candidateWindow: false,
+    skipKeydown: false,
 
     "{textarea} beforecut": function() {
 
@@ -578,7 +612,7 @@ function(self){ return {
         // If keydown event has been fired multiple times
         // this might mean the user has entered candidate
         // window and we should not do anything.
-        if (self.candidateWindow) return;
+        if (self.skipKeydown) return;
 
         self.lengthBefore = textarea.val().length;
 
@@ -586,22 +620,22 @@ function(self){ return {
             self.caretInitial = 
             self.caretBefore = textarea.caret();
 
-        console.log("keydown", event.which, caret);
-
         if (event.keyCode===8 && $.IE < 10) {
             self.overlay().css('opacity', 0);
         }
 
-        self.candidateWindow = true;
+        console.log("keydown", event.which, caret);        
+
+        self.skipKeydown = true;
     },
 
     // Keypress event will not trigger when meta keys are pressed,
     // it will trigger on well-formed characters.
     "{textarea} keypress": function(textarea, event) {
 
-        // if (self.candidateWindow) {
-        //     self.delayInput = true;
-        // }
+        // This will help on situations where user
+        // holds an arrow key + presses another character.
+        self.caretBefore = textarea.caret();
 
         // FF fires keypress on backspace, while Chrome & IE doesn't.
         // We normalize this behaviour by not doing anything on backspace.
@@ -618,7 +652,7 @@ function(self){ return {
 
     "{textarea} keyup": function(textarea, event) {
 
-        self.candidateWindow = false;
+        self.skipKeydown = false;
 
         // Listen to backspace during keydown because
         // it is not fired on input/keypress on IE9.
