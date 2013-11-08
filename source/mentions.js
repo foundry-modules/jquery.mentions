@@ -265,14 +265,8 @@ $.extend(Marker.prototype, {
             block  = marker.block,
             next   = block ? block.nextSibling : text.nextSibling;
 
-        console.log(end, marker.length);
-
-        // If we're spawning in the middle of a marker
-        if (end < marker.length) {
-
-            // Split out the end marker and insert it before the next marker
-            next = parent.insertBefore(text.splitText(end), next);
-        }
+        // Split out the end marker and insert it before the next marker
+        next = parent.insertBefore(text.splitText(end), next);
 
         // Split out the text
         text = text.splitText(start);
