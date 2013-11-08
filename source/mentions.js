@@ -188,6 +188,8 @@ $.extend(Marker.prototype, {
 
         // Trigger marker for post processing
         $(parent).trigger("markerInsert", [marker, nodes, str, start, end]);
+
+        return marker;
     },
 
     remove: function() {
@@ -200,6 +202,8 @@ $.extend(Marker.prototype, {
         marker.removed = true;
 
         $(parent).trigger("markerRemove", [marker]);
+
+        return marker;
     },
 
     toTextMarker: function(normalize) {
@@ -227,9 +231,30 @@ $.extend(Marker.prototype, {
         return marker;
     },
 
-    toBlockMarker: function() {
+    toBlockMarker: function(normalize) {
+
+        var marker = this;
+
+        // If this is a block marker, skip.
+        if (marker.block) return;
+
+        var parent = marker.parent,
+            block = marker.block = document.createElement("SPAN"),
+            text  = marker.text;
+
+        // Insert block before the next marker
+        parent.insertBefore(block, text.nextSibling);
+
+        // Move text inside block marker
+        block.appendChild(text);
+
+        // Normalizing will join 2 separated
+        // text nodes together forming a single marker.
+        normalize && parent.normalize();
 
         $(marker.parent).trigger("markerConvert", [this, "block", normalize]);
+
+        return marker;
     },
 
     spawn: function(start, end) {
@@ -259,7 +284,7 @@ $.extend(Marker.prototype, {
             end    : (end = marker.start + end),
             length : end - start,
             text   : text,
-            parent : marker.overlay,
+            parent : marker.parent,
             before : marker,
             after  : marker.after,
             mutable: marker.mutable
@@ -854,8 +879,14 @@ function(self){ return {
                     end = start + ((end < 0) ? val.length : end);
             }
 
-            var spawn = marker.spawn(start, end);
+            // Spawn a new marker from this string
+            // and convert this marker into a block marker
+            var spawn = marker.spawn(start, end).toBlockMarker();
+
+            // Update the mutability of the spawned marker
+            spawn.mutable = trigger.mutable;
         }
+
     },
 
     "{overlay} markerRemove": function(overlay, event, marker) {
