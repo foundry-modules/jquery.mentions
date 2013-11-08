@@ -5,7 +5,8 @@ var awaitingKeyup_ = "awaitingKeyup",
     waitForKeyup = "waitForKeyup",
     skipInput = "skipInput";
 
-var nbsp    = "\u00a0",
+var space   = " ",
+    nbsp    = "\u00a0",
     newline = "\n";
 
 // TODO: Put this elsewhere
@@ -186,7 +187,7 @@ $.extend(Marker.prototype, {
         newline && parent.insertBefore(marker.block = document.createElement("BR"), next);
 
         // Trigger marker for post processing
-        $(parent).trigger("markerInsert", [marker, nodes]);
+        $(parent).trigger("markerInsert", [marker, nodes, str, start, end]);
     },
 
     remove: function() {
@@ -229,6 +230,47 @@ $.extend(Marker.prototype, {
     toBlockMarker: function() {
 
         $(marker.parent).trigger("markerConvert", [this, "block", normalize]);
+    },
+
+    spawn: function(start, end) {
+
+        var marker = this,
+            text   = marker.text,
+            parent = marker.parent,
+            block  = marker.block,
+            next   = block ? block.nextSibling : text.nextSibling;
+
+        console.log(end, marker.length);
+
+        // If we're spawning in the middle of a marker
+        if (end < marker.length) {
+
+            // Split out the end marker and insert it before the next marker
+            next = parent.insertBefore(text.splitText(end), next);
+        }
+
+        // Split out the text
+        text = text.splitText(start);
+
+        // Create marker object from new text object
+        spawn = new Marker({
+            index  : marker.index + 1,
+            start  : (start = marker.start + start),
+            end    : (end = marker.start + end),
+            length : end - start,
+            text   : text,
+            parent : marker.overlay,
+            before : marker,
+            after  : marker.after,
+            mutable: marker.mutable
+        });
+
+        // Update current marker
+        marker.end    = start,
+        marker.length = marker.end - marker.start;
+        marker.after  = spawn;
+
+        return spawn;
     }
 });
 
@@ -255,11 +297,11 @@ $.Controller("Mentions",
         triggers: {
             "@": {
                 type: 'entity',
-                allowSpace: true
+                mutable: false
             },
             "#": {
                 type: 'hashtag',
-                allowSpace: false
+                mutable: true
             }
         },
 
@@ -796,8 +838,24 @@ function(self){ return {
 
     //--- Marker Events ----//
 
-    "{overlay} markerInsert": function(overlay, event, marker, nodes) {
+    "{overlay} markerInsert": function(overlay, event, marker, nodes, str, start, end) {
 
+        var triggers = self.options.triggers,
+            trigger;
+
+        // If a trigger key was entered
+        if (triggers.hasOwnProperty(str) && (trigger = triggers[str])) {
+
+            if (trigger.mutable) {
+                // Extract the remaining string after the trigger key
+                var val = marker.text.nodeValue.slice(start),
+                    // Find the first found space, that's where the string ends.
+                    end = val.indexOf(space);
+                    end = start + ((end < 0) ? val.length : end);
+            }
+
+            var spawn = marker.spawn(start, end);
+        }
     },
 
     "{overlay} markerRemove": function(overlay, event, marker) {
