@@ -183,7 +183,7 @@ $.extend(Marker.prototype, {
         }
 
         text.nodeValue = chunks[i];
-        mutable && marker.toTextMarker(false);
+        // mutable && marker.toTextMarker(false);
         newline && parent.insertBefore(marker.block = document.createElement("BR"), next);
 
         // Trigger marker for post processing
@@ -269,7 +269,7 @@ $.extend(Marker.prototype, {
         next = parent.insertBefore(text.splitText(end), next);
 
         // Split out the text
-        text = text.splitText(start);
+        text = parent.insertBefore(text.splitText(start), next);
 
         // Create marker object from new text object
         spawn = new Marker({
