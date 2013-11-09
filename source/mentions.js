@@ -1,6 +1,7 @@
-var _space   = " ",
-    _nbsp    = "\u00a0",
-    _newline = "\n";
+var _backspace = "",
+    _space     = " ",
+    _nbsp      = "\u00a0",
+    _newline   = "\n";
 
 // TODO: Put this elsewhere
 $.fn.caret = function(start, end) {
@@ -148,11 +149,12 @@ $.extend(Marker.prototype, {
     insert: function(str, start, end) {
 
         // Marker
-        var marker  = this,
-            block   = marker.block;
-            newline = str==_newline,
-            space   = str==_space,
-            length  = marker.length;
+        var marker    = this,
+            block     = marker.block,
+            newline   = str==_newline,
+            space     = str==_space,
+            backspace = str==_backspace,
+            length    = marker.length;
         
         // If no start position was given,
         // assume want to insert at the end of the text.
@@ -160,11 +162,11 @@ $.extend(Marker.prototype, {
 
         // If no end position was given,
         // assume we want to insert in a single position.
-        if (end===undefined) end = start;            
+        if (end===undefined) end = start;
 
         // If we are at the end of a block marker OR this is a newline block marker,
         // space & newline should be added to beginning of the next marker.
-        if (block && end==length && (space || newline || block.nodeName=="BR")) {
+        if (block && end==length && !backspace && (space || newline)) {
             return marker.spawn().insert(str, 0);
         }
 
@@ -549,6 +551,20 @@ function(self){ return {
     insert: function(str, start, end) {
 
         var marker, offset;
+
+        // Special case for removing br in the beginning of a textarea
+        // If this is a backspace
+        if (str==_backspace &&
+            // and we're at the beginning of a textarea
+            start==0 && end==1 &&
+            // Get marker
+            (marker = self.getMarkerAt(0)) &&
+            // and verify if marker is a BR tag
+            marker.block && marker.block.nodeName=="BR") {
+
+            // If it is a BR tag then remove it.
+            return marker.remove();
+        }
 
         // If we are inserting character(s)
         if (start===end || end===undefined) {
