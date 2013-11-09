@@ -151,6 +151,7 @@ $.extend(Marker.prototype, {
         // Marker
         var marker    = this,
             block     = marker.block,
+            br        = block ? block.nodeName=="BR" : false,
             newline   = str==_newline,
             space     = str==_space,
             backspace = str==_backspace,
@@ -166,7 +167,7 @@ $.extend(Marker.prototype, {
 
         // If we are at the end of a block marker OR this is a newline block marker,
         // space & newline should be added to beginning of the next marker.
-        if (block && end==length && !backspace && (space || newline)) {
+        if (block && end==length && !backspace && (space || newline || br)) {
             return marker.spawn().insert(str, 0);
         }
 
