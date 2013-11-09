@@ -395,15 +395,15 @@ function(self){ return {
 
     init: function() {
 
+        // Speed up access to overlay
+        self._overlay  = self.overlay()[0];
+        self._textarea = self.textarea()[0];
+        
         self.cloneLayout();
 
         // Temporarily set to true
         self.options.inspector = true;
         self.showInspector();
-
-        // Speed up access to overlay
-        self._overlay  = self.overlay()[0];
-        self._textarea = self.textarea()[0];
     },
 
     setLayout: function() {
