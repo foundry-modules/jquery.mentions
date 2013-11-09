@@ -408,6 +408,7 @@ function(self){ return {
 
     setLayout: function() {
 
+        self.normalize();
     },
 
     cloneLayout: function() {
@@ -420,6 +421,8 @@ function(self){ return {
         });
 
         overlay.css('opacity', 1);
+
+        self.setLayout();
     },
 
     //--- Triggers ----//
@@ -651,17 +654,24 @@ function(self){ return {
 
         var overlay = self._overlay;
 
+        // This clean up empty text nodes in the beginning and
+        // the end of the overlay and join disjointed text nodes
+        // that are supposed to be a single text node.
         overlay.normalize();
 
+        // This is a double-edged workaround.
+        // - When there is no child element (empty textarea),
+        //   an empty text node ensure overlay has a minimum
+        //   single line-height.
+        // - If there is a newline at the end of the overlay,
+        //   an empty text node ensure overlay accomodates
+        //   the height of the newline.
         var last = overlay.lastChild;
-
-        // If this is a newline at the end of the overlay, insert an
-        // empty text node to ensure overlay expands to the textarea.
-        if (last.nodeName==="BR") {
+        if (!last || last.nodeName==="BR") {
             overlay.appendChild(document.createTextNode(""));
         }
 
-        console.log(overlay.childNodes);
+        console.log("after", overlay.childNodes);
     },
 
     //--- Key events & caret handling ---//
