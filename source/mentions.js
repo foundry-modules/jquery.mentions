@@ -208,8 +208,6 @@ $.extend(Marker.prototype, {
             next = br;
         }
 
-        console.log(marker, chunks);
-
         // Update the text value in the current marker
         marker.val(chunks[i]);
 
@@ -560,21 +558,8 @@ function(self){ return {
 
         console.log("before", self._overlay.childNodes);
 
-        // Special case for removing br in the beginning of a textarea
-        // If this is a backspace
-        if (str==_backspace &&
-            // and we're at the beginning of a textarea
-            start==0 && end==1 &&
-            // Get marker
-            (marker = self.getMarkerAt(0)) &&
-            // and verify if marker is a BR tag
-            marker.block && marker.block.nodeName=="BR") {
-
-            // If it is a BR tag then remove it.
-            marker.remove();
-
         // If we are inserting character(s)    
-        } else if (start===end || end===undefined) {
+        if (start===end || end===undefined) {
 
             // Get marker & offset
             marker = self.getMarkerAt(start);
@@ -633,6 +618,11 @@ function(self){ return {
             // Insert characters in the first marker
             // hello -> hexxxe
             marker.insert(str, start - marker.start, marker.length);
+
+            // Special case for handling br tag in the beginning of the textarea
+            if (start===0 && (marker.block || {}).nodeName=="BR") {
+                marker.remove();
+            }
         }
 
         // Normalize all text markers
@@ -678,7 +668,7 @@ function(self){ return {
         overlay.style.height = "auto";
         overlay.style.height = textarea.scrollHeight + "px";
 
-        // IE & Opera textarea's scrollHeight may jump position
+        // IE & Opera textarea's scrollTop may jump position
         // from time to time so we need to reset it back.
         textarea.scrollTop = 0;
 
