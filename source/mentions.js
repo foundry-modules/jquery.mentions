@@ -659,6 +659,9 @@ function(self){ return {
         // that are supposed to be a single text node.
         overlay.normalize();
 
+        // Chrome still needs this.
+        overlay.style.height = "auto";        
+
         // This is a double-edged workaround.
         // - When there is no child element (empty textarea),
         //   an empty text node ensure overlay has a minimum
@@ -669,6 +672,9 @@ function(self){ return {
         var last = overlay.lastChild;
         if (!last || last.nodeName==="BR") {
             overlay.appendChild(document.createTextNode(""));
+
+            // Chrome still needs this.
+            overlay.style.height = self._textarea.scrollHeight + "px";
         }
 
         console.log("after", overlay.childNodes);
