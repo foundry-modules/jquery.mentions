@@ -783,10 +783,15 @@ function(self){ return {
 
     "{textarea} input": function(textarea) {
 
-        // if (self[skipInput]) return self[skipInput] = false;
-        // if (self.delayInput) return;
-
         self.reflect();
+
+        // Extra precaution in case overlay goes wrong,
+        // user can start all over again by clearing
+        // the textarea.
+        if (textarea.val().length < 1) {
+            self.overlay().empty();
+            self.normalize();
+        }                
     },
 
     "{textarea} keyup": function(textarea, event) {
