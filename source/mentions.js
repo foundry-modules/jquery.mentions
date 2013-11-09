@@ -208,6 +208,8 @@ $.extend(Marker.prototype, {
             next = br;
         }
 
+        console.log(marker, chunks);
+
         // Update the text value in the current marker
         marker.val(chunks[i]);
 
@@ -553,6 +555,8 @@ function(self){ return {
 
         var marker, offset;
 
+        console.log("before", self._overlay.childNodes);
+
         // Special case for removing br in the beginning of a textarea
         // If this is a backspace
         if (str==_backspace &&
@@ -612,25 +616,10 @@ function(self){ return {
             // hello [john] [doe] --> hello [john] doe
             if (marker.block) marker.toTextMarker();
 
-            // If this marker is mutable (all text markers are mutable)
-            if (marker.mutable) {
-
-                // Remove characters from text marker
-                // doe --> e
-                // hello [john] doe --> hello [john] e
-                marker.insert("", 0, end - marker.start);
-
-            // If this marker is not mutable
-            } else {
-
-                // Remove remaining string from textarea
-                // doe --> (removed)
-                // hello [john] doe --> hello [john]
-                self.textareaInsert("", end, marker.length);
-
-                // Remove marker
-                marker.remove(); 
-            }
+            // Remove characters from text marker
+            // doe --> e
+            // hello [john] doe --> hello [john] e
+            marker.insert("", 0, end - marker.start);
 
             // Remove all markers in between
             // [john] --> (removed)
