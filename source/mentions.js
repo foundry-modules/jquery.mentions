@@ -571,11 +571,10 @@ function(self){ return {
             marker.block && marker.block.nodeName=="BR") {
 
             // If it is a BR tag then remove it.
-            return marker.remove();
-        }
+            marker.remove();
 
-        // If we are inserting character(s)
-        if (start===end || end===undefined) {
+        // If we are inserting character(s)    
+        } else if (start===end || end===undefined) {
 
             // Get marker & offset
             marker = self.getMarkerAt(start);
@@ -652,15 +651,13 @@ function(self){ return {
 
     normalize: function() {
 
-        var overlay = self._overlay;
+        var overlay = self._overlay,
+            textarea = self._textarea;
 
         // This clean up empty text nodes in the beginning and
         // the end of the overlay and join disjointed text nodes
         // that are supposed to be a single text node.
         overlay.normalize();
-
-        // Chrome still needs this.
-        overlay.style.height = "auto";        
 
         // This is a double-edged workaround.
         // - When there is no child element (empty textarea),
@@ -672,10 +669,18 @@ function(self){ return {
         var last = overlay.lastChild;
         if (!last || last.nodeName==="BR") {
             overlay.appendChild(document.createTextNode(""));
-
-            // Chrome still needs this.
-            overlay.style.height = self._textarea.scrollHeight + "px";
         }
+
+        // Chrome, Opera & IE doesn't accomodate height of
+        // newline after an empty text node, so reset the
+        // overlay height to auto, and retrieve the textarea
+        // scrollHeight again.
+        overlay.style.height = "auto";
+        overlay.style.height = textarea.scrollHeight + "px";
+
+        // IE & Opera textarea's scrollHeight may jump position
+        // from time to time so we need to reset it back.
+        textarea.scrollTop = 0;
 
         console.log("after", overlay.childNodes);
     },
