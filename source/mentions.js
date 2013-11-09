@@ -1,13 +1,6 @@
-// To increase comparession
-var awaitingKeyup_ = "awaitingKeyup",
-    insertBefore_ = "insertBefore",
-    userInCandidateWindow = "userInCandidateWindow",
-    waitForKeyup = "waitForKeyup",
-    skipInput = "skipInput";
-
-var space   = " ",
-    nbsp    = "\u00a0",
-    newline = "\n";
+var _space   = " ",
+    _nbsp    = "\u00a0",
+    _newline = "\n";
 
 // TODO: Put this elsewhere
 $.fn.caret = function(start, end) {
@@ -139,52 +132,81 @@ var Marker = function(options) {
 
 $.extend(Marker.prototype, {
 
+    val: function(str) {
+
+        var marker = this;
+
+        // Update text value
+        marker.text.nodeValue = str;
+
+        // Update end & length
+        marker.end = marker.start + (marker.length = str.length);
+
+        return this;
+    },
+
     insert: function(str, start, end) {
 
         // Marker
-        var marker = this,
+        var marker  = this,
+            block   = marker.block;
+            newline = str==_newline,
+            space   = str==_space,
+            length  = marker.length;
+        
+        // If no start position was given,
+        // assume want to insert at the end of the text.
+        if (start===undefined) start = length;
 
-            // Text
-            text    = marker.text,
-            val     = text.nodeValue,
-            prefix  = val.substring(0, start),
-            suffix  = val.slice(end),
-            mutable = marker.mutable,
-            newline = (str==newline),
+        // If no end position was given,
+        // assume we want to insert in a single position.
+        if (end===undefined) end = start;            
 
-            // Nodes
-            parent  = marker.parent,
-            block   = marker.block,
-            next    = block ? block.nextSibling : text.nextSibling,
-
-            // Chunks
-            // Replace double space with one space + one nbsp
-            chunks = str.replace(/  /g, " " + nbsp).split(newline),
-            nodes  = [],
-            i      = chunks.length;
-
-        // If marker is mutable, we add the prefix/suffix to the first/last chunk.
-        if (mutable) {
-            chunks[0] = prefix + chunks[0];
-            chunks[i-1] += suffix;
+        // If we are at the end of a block marker OR this is a newline block marker,
+        // space & newline should be added to beginning of the next marker.
+        if (block && end==length && (space || newline || block.nodeName=="BR")) {
+            return marker.spawn().insert(str, 0);
         }
 
+        // Nodes
+        var parent = marker.parent,
+            text   = marker.text,
+            next   = block ? block.nextSibling : text.nextSibling,
+
+            // Text
+            val    = text.nodeValue,
+            prefix = val.substring(0, start),
+            suffix = val.slice(end),
+
+            // Chunks
+            // Replace double space with one space and one nbsp to ensure
+            // overlay is rendered proper spacing + identical word-wrap.
+            chunks = str.replace(/  /g, " " + _nbsp).split(_newline),
+            nodes  = [],
+            node   = block || text,
+            i      = chunks.length;         
+
+        // Add the prefix/suffix to the first/last chunk.
+        // If this is a single chunk, the suffix is
+        // actually added to the same chunk. :)
+        chunks[0] = prefix + chunks[0];
+        chunks[i-1] += suffix;
+
+        // If this is a single chunk, this loop won't execute
+        // but we still benefit from having the correct index. :)
         while (--i) {
 
             var node = document.createTextNode(chunks[i]),
                 br = document.createElement("BR");
 
-            parent.insertBefore(node, next);
-            parent.insertBefore(br, node);
-            nodes.push(node);
-            nodes.push(br);
+            nodes.push(parent.insertBefore(node, next));
+            nodes.push(parent.insertBefore(br, node));
 
             next = br;
         }
 
-        text.nodeValue = chunks[i];
-        // mutable && marker.toTextMarker(false);
-        newline && parent.insertBefore(marker.block = document.createElement("BR"), next);
+        // Update the text value in the current marker
+        marker.val(chunks[i]);
 
         // Trigger marker for post processing
         $(parent).trigger("markerInsert", [marker, nodes, str, start, end]);
@@ -265,14 +287,26 @@ $.extend(Marker.prototype, {
             block  = marker.block,
             next   = block ? block.nextSibling : text.nextSibling;
 
-        // Split out the end marker and insert it before the next marker
-        next = parent.insertBefore(text.splitText(end), next);
+        // If not start and end position was given, assume that
+        // we're spawning an empty marker next to the current marker.
+        // [hello] --> [hello[]
+        if (start===undefined) {
+            start = end = marker.length;
+        }
+
+        // If we're spawning in text in the middle,
+        // split out the end marker and insert it before the next marker.
+        // [he*ll*o] --> [he*ll*][o]
+        if (end < marker.length) {
+            next = parent.insertBefore(text.splitText(end), next);
+        } 
 
         // Split out the text
+        // [he*ll*][o] --> [he][ll][o]
         text = parent.insertBefore(text.splitText(start), next);
 
         // Create marker object from new text object
-        spawn = new Marker({
+        var spawn = new Marker({
             index  : marker.index + 1,
             start  : (start = marker.start + start),
             end    : (end = marker.start + end),
@@ -390,7 +424,7 @@ function(self){ return {
     getTrigger: function(triggerKey) {
 
         return self.options.triggers[triggerKey || self.triggered];
-    },    
+    },
 
     //--- Marker traversal ----//
 
@@ -426,12 +460,14 @@ function(self){ return {
                 end,
                 length,
                 mutable = true,
+                allowSpace = false,
                 nodeType = node.nodeType,
                 nodeName = node.nodeName;
 
             // If this is a text node, assign this node as marker text
             if (nodeType==3) {
                 text = node;
+                allowSpace = true;
             // else assign this node as marker block,
             // then test if node is <br/>, create a detached text node contaning a line break,
             } else if ((block = node) && nodeName=="BR") {
@@ -454,7 +490,8 @@ function(self){ return {
                 block : block,
                 parent: overlay,
                 before: before,
-                mutable: mutable
+                mutable: mutable,
+                allowSpace: allowSpace
             });
 
             // If this is the second iteration, decorate the marker the after property
@@ -521,75 +558,77 @@ function(self){ return {
             offset = marker.start;
 
             // Insert character
-            return marker.insert(str, start - offset, end - offset);
-        }
+            marker.insert(str, start - offset, end - offset);
 
-        // If we are replacing character(s)
-
-        // Identify affected markers
-        var markers = self.getMarkersBetween(start, end),
-            length = markers.length;
-
-        // If there are no marker, stop.
-        if (length < 1) return;
-
-        // If we're modifying a single marker
-        // e.g. he*llo* --> he*y*
-        if (length==1) {
-
-            // Get marker & offset
-            marker = markers[0];
-            offset = marker.start;
-
-            // Insert character
-            return marker.insert(str, start - offset, end - offset);
-        }
-
-        // If we're modifying multiple markers
-        // e.g. he*llo [john] [do*e] --> he*xxx*e
-
-        // Deal with markers in reverse
-        var i = length - 1,
-            marker = markers[i];
-
-        // Convert block marker into text marker
-        // [doe] --> doe
-        // hello [john] [doe] --> hello [john] doe
-        if (marker.block) marker.toTextMarker();
-
-        // If this marker is mutable (all text markers are mutable)
-        if (marker.mutable) {
-
-            // Remove characters from text marker
-            // doe --> e
-            // hello [john] doe --> hello [john] e
-            marker.insert("", 0, end - marker.start);
-
-        // If this marker is not mutable
         } else {
 
-            // Remove remaining string from textarea
-            // doe --> (removed)
-            // hello [john] doe --> hello [john]
-            self.textareaInsert("", end, marker.length);
+            // If we are replacing character(s)
 
-            // Remove marker
-            marker.remove(); 
+            // Identify affected markers
+            var markers = self.getMarkersBetween(start, end),
+                length = markers.length;
+
+            // If there are no marker, stop.
+            if (length < 1) return;
+
+            // If we're modifying a single marker
+            // e.g. he*llo* --> he*y*
+            if (length==1) {
+
+                // Get marker & offset
+                marker = markers[0];
+                offset = marker.start;
+
+                // Insert character
+                return marker.insert(str, start - offset, end - offset);
+            }
+
+            // If we're modifying multiple markers
+            // e.g. he*llo [john] [do*e] --> he*xxx*e
+
+            // Deal with markers in reverse
+            var i = length - 1,
+                marker = markers[i];
+
+            // Convert block marker into text marker
+            // [doe] --> doe
+            // hello [john] [doe] --> hello [john] doe
+            if (marker.block) marker.toTextMarker();
+
+            // If this marker is mutable (all text markers are mutable)
+            if (marker.mutable) {
+
+                // Remove characters from text marker
+                // doe --> e
+                // hello [john] doe --> hello [john] e
+                marker.insert("", 0, end - marker.start);
+
+            // If this marker is not mutable
+            } else {
+
+                // Remove remaining string from textarea
+                // doe --> (removed)
+                // hello [john] doe --> hello [john]
+                self.textareaInsert("", end, marker.length);
+
+                // Remove marker
+                marker.remove(); 
+            }
+
+            // Remove all markers in between
+            // [john] --> (removed)
+            // hello [john] --> hello
+            while ((marker = markers[--i]) && i > 0) {
+                marker.remove();
+            }
+
+            // Insert characters in the first marker
+            // hello -> hexxxe
+            marker.insert(str, start - marker.start, marker.length);
         }
-
-        // Remove all markers in between
-        // [john] --> (removed)
-        // hello [john] --> hello
-        while ((marker = markers[--i]) && i > 0) {
-            marker.remove();
-        }
-
-        // Insert characters in the first marker
-        // hello -> hexxxe
-        marker.insert(str, start - marker.start, marker.length);
 
         // Normalize all text markers
-        self._overlay.normalize();
+        self.normalize();
 
         return marker;
     },
@@ -600,6 +639,23 @@ function(self){ return {
             val = textarea.value;
 
         return textarea.value = val.substring(0, start) + str + val.slice(end);
+    },
+
+    normalize: function() {
+
+        var overlay = self._overlay;
+
+        overlay.normalize();
+
+        var last = overlay.lastChild;
+
+        // If this is a newline at the end of the overlay, insert an
+        // empty text node to ensure overlay expands to the textarea.
+        if (last.nodeName==="BR") {
+            overlay.appendChild(document.createTextNode(""));
+        }
+
+        console.log(overlay.childNodes);
     },
 
     //--- Key events & caret handling ---//
@@ -869,14 +925,13 @@ function(self){ return {
                 // Extract the remaining string after the trigger key
                 var val = marker.text.nodeValue.slice(start),
                     // Find the first found space, that's where the string ends.
-                    end = val.indexOf(space);
+                    end = val.indexOf(_space);
                     end = start + ((end < 0) ? val.length : end);
             }
 
             // Spawn a new marker from this string
             // and convert this marker into a block marker
             var spawn = marker.spawn(start, end).toBlockMarker();
-
             // Update the mutability of the spawned marker
             spawn.mutable = trigger.mutable;
         }
