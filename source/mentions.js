@@ -682,6 +682,8 @@ function(self){ return {
     /*
     List of input patterns to test:
 
+    0. Meta-characters via alt + shift + (any key).
+
     1. Holding arrow key + pressing another character.
 
     2. Select a range of characters (covering single/multiple marker)
@@ -714,8 +716,6 @@ function(self){ return {
     */
 
     lengthBefore: null,
-
-    caretInitial: null,
 
     caretBefore: null,
 
@@ -752,9 +752,7 @@ function(self){ return {
 
         self.lengthBefore = textarea.val().length;
 
-        var caret = 
-            self.caretInitial = 
-            self.caretBefore = textarea.caret();
+        var caret = self.caretBefore = textarea.caret();
 
         if (event.keyCode===8 && $.IE < 10) {
             self.overlay().css('opacity', 0);
@@ -823,10 +821,6 @@ function(self){ return {
 
             wholeText = textarea.value,
 
-            // Caret position retrieved on keydown event
-            // is the position before user enters candidate mode.
-            caretInitial = self.caretInitial,
-
             // Caret position retrieved on previous input event
             // is the position before the character is inserted
             caretBefore = self.caretBefore,
@@ -839,7 +833,6 @@ function(self){ return {
 
             replace = false;
 
-            console.log("caretInitial", caretInitial);
             console.log("caretBefore" , caretBefore);
             console.log("caretAfter"  , caretAfter);
 
@@ -892,7 +885,6 @@ function(self){ return {
         } else {
             self.insert(text, rangeStart, rangeEnd);            
         }
-
 
         console.log("range", rangeStart, rangeEnd);
         console.log("text" , textStart, textEnd, text);          
