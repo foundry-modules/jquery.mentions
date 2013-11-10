@@ -593,41 +593,42 @@ function(self){ return {
                 offset = marker.start;
 
                 // Insert character
-                return marker.insert(str, start - offset, end - offset);
-            }
+                marker.insert(str, start - offset, end - offset);
+            } else {
 
-            // If we're modifying multiple markers
-            // e.g. he*llo [john] [do*e] --> he*xxx*e
+                // If we're modifying multiple markers
+                // e.g. he*llo [john] [do*e] --> he*xxx*e
 
-            // Deal with markers in reverse
-            var i = length - 1,
-                marker = markers[i];
+                // Deal with markers in reverse
+                var i = length - 1,
+                    marker = markers[i];
 
-            // Convert block marker into text marker
-            // [doe] --> doe
-            // hello [john] [doe] --> hello [john] doe
-            // TODO: Maybe this should be done by post-processors.
-            // if (marker.block) marker.toTextMarker();
+                // Convert block marker into text marker
+                // [doe] --> doe
+                // hello [john] [doe] --> hello [john] doe
+                // TODO: Maybe this should be done by post-processors.
+                // if (marker.block) marker.toTextMarker();
 
-            // Remove characters from text marker
-            // doe --> e
-            // hello [john] doe --> hello [john] e
-            marker.insert("", 0, end - marker.start);
+                // Remove characters from text marker
+                // doe --> e
+                // hello [john] doe --> hello [john] e
+                marker.insert("", 0, end - marker.start);
 
-            // Remove all markers in between
-            // [john] --> (removed)
-            // hello [john] --> hello
-            while ((marker = markers[--i]) && i > 0) {
-                marker.remove();
-            }
+                // Remove all markers in between
+                // [john] --> (removed)
+                // hello [john] --> hello
+                while ((marker = markers[--i]) && i > 0) {
+                    marker.remove();
+                }
 
-            // Insert characters in the first marker
-            // hello -> hexxxe
-            marker.insert(str, start - marker.start, marker.length);
+                // Insert characters in the first marker
+                // hello -> hexxxe
+                marker.insert(str, start - marker.start, marker.length);
 
-            // Special case for handling br tag in the beginning of the textarea
-            if (start===0 && marker.br) {
-                marker.remove();
+                // Special case for handling br tag in the beginning of the textarea
+                if (start===0 && marker.br) {
+                    marker.remove();
+                }
             }
         }
 
@@ -788,9 +789,8 @@ function(self){ return {
 
     "{textarea} input": function(textarea) {
 
+        self.reflect();
 
-        self.reflect();    
-        
         // Extra precaution in case overlay goes wrong,
         // user can start all over again by clearing
         // the textarea.
@@ -813,11 +813,9 @@ function(self){ return {
 
             self.insert("", caretAfter.end, caretBefore.end);
 
-            self.overlay().css('opacity', 1);
+            self.caretBefore = caretAfter;
 
-            if (self.delayInput) {
-                self.reflect();
-            }
+            self.overlay().css('opacity', 1);
         }
 
         console.log("keyup", event.which || event.keyCode, textarea.caret());
