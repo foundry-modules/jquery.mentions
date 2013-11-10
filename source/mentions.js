@@ -606,7 +606,8 @@ function(self){ return {
             // Convert block marker into text marker
             // [doe] --> doe
             // hello [john] [doe] --> hello [john] doe
-            if (marker.block) marker.toTextMarker();
+            // TODO: Maybe this should be done by post-processors.
+            // if (marker.block) marker.toTextMarker();
 
             // Remove characters from text marker
             // doe --> e
