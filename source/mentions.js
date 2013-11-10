@@ -153,7 +153,7 @@ $.extend(Marker.prototype, {
         // Marker
         var marker    = this,
             block     = marker.block,
-            br        = block ? block.nodeName=="BR" : false,
+            br        = marker.br,
             newline   = str==_newline,
             space     = str==_space,
             backspace = str==_backspace,
@@ -467,6 +467,7 @@ function(self){ return {
                 block = null,
                 end,
                 length,
+                br = false,
                 mutable = true,
                 allowSpace = false,
                 nodeType = node.nodeType,
@@ -481,6 +482,7 @@ function(self){ return {
             } else if ((block = node) && nodeName=="BR") {
                 text = document.createTextNode("\n");
                 mutable = false;
+                br = true;
             // if this is an invalid node, e.g. node not element, node not span, span has no text child node,
             // remove code from overlay and skip this loop.
             } else if (nodeType!==1 || nodeName!=="SPAN" || !(text = node.childNodes[0]) || text.nodeType!==3) {
@@ -498,6 +500,7 @@ function(self){ return {
                 block : block,
                 parent: overlay,
                 before: before,
+                br    : br,
                 mutable: mutable,
                 allowSpace: allowSpace
             });
@@ -622,7 +625,7 @@ function(self){ return {
             marker.insert(str, start - marker.start, marker.length);
 
             // Special case for handling br tag in the beginning of the textarea
-            if (start===0 && (marker.block || {}).nodeName=="BR") {
+            if (start===0 && marker.br) {
                 marker.remove();
             }
         }
@@ -869,7 +872,7 @@ function(self){ return {
         // - User enters backspace to remove a character.
         // - User finalizes a selection from the candidate window where characters
         //   are shorter than being typed, e.g. "ni hao" --> "你好".
-        if (diff===0 || caretAfter.end < caretBefore.start) {
+        if (!marker.br && (diff===0 || caretAfter.end < caretBefore.start)) {
 
             var textStart  = marker.start,
                 textEnd    = marker.end - diff,
@@ -906,7 +909,7 @@ function(self){ return {
         }
 
         console.log("range", rangeStart, rangeEnd);
-        console.log("text" , textStart, textEnd, text);        
+        console.log("text" , textStart, textEnd, text);
 
         // Ensure Opera follows the caretAfter behaviour of other
         // browsers when typing inside the candidate window.
