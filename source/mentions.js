@@ -852,8 +852,9 @@ function(self){ return {
         //   are shorter than being typed, e.g. "ni hao" --> "你好".            
             caretAfter.end < caretBefore.start) {
 
+
             var textStart  = marker.start,
-                textEnd    = marker.end - (caretBefore.start - caretAfter.end),
+                textEnd    = marker.end - (self.lengthBefore - wholeText.length),
                 rangeStart = caretAfter.end,
                 rangeEnd   = caretBefore.start,
                 replace    = textStart!==textEnd;
