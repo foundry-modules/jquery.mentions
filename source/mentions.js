@@ -674,6 +674,12 @@ function(self){ return {
         // from time to time so we need to reset it back.
         textarea.scrollTop = 0;
 
+        // Remember the current textarea length.
+        // We do it here instead of keydown event
+        // because Opera returns the length of the
+        // textarea after it has been changed.
+        self.lengthBefore = textarea.value.length;
+
         console.log("after", overlay.childNodes);
     },
 
@@ -750,8 +756,6 @@ function(self){ return {
         // window and we should not do anything.
         if (self.skipKeydown) return;
 
-        self.lengthBefore = textarea.val().length;
-
         var caret = self.caretBefore = textarea.caret();
 
         if (event.keyCode===8 && $.IE < 10) {
@@ -767,6 +771,8 @@ function(self){ return {
     // it will trigger on well-formed characters.
     "{textarea} keypress": function(textarea, event) {
 
+        console.log("keypress");
+
         // This will help on situations where user
         // holds an arrow key + presses another character.
         self.caretBefore = textarea.caret();
@@ -778,8 +784,9 @@ function(self){ return {
 
     "{textarea} input": function(textarea) {
 
-        self.reflect();
 
+        self.reflect();    
+        
         // Extra precaution in case overlay goes wrong,
         // user can start all over again by clearing
         // the textarea.
@@ -829,12 +836,25 @@ function(self){ return {
             // is the position after the character is inserted.
             caretAfter = self.caretAfter = $(textarea).caret(),
 
+            // Determine if user is on Opera + candidate window.
+            operaCandidateWindow = ($.browser.opera && caretAfter.end > caretAfter.start),
+
             marker = self.getMarkerAt(caretBefore.start),
+
+            diff = self.lengthBefore - wholeText.length,
 
             replace = false;
 
-            console.log("caretBefore" , caretBefore);
-            console.log("caretAfter"  , caretAfter);
+        // Ensure Opera follows the caretBefore behaviour of other
+        // browsers when typing inside the candidate window.
+        if (operaCandidateWindow) {
+            if (caretBefore.start!==caretBefore.end) {
+                caretBefore.end += diff;     
+            }
+        }
+
+        console.log("caretBefore", caretBefore.start, caretBefore.end);
+        console.log("caretAfter" , caretAfter.start , caretAfter.end);
 
         // If there is a change in the text content but the length of the
         // text content is the same length as before, it is impossible to
@@ -844,17 +864,15 @@ function(self){ return {
         //   character from the candidate window.
         // - User navigates between characters using arrow keys
         //   within the candidate window.
-        if (self.lengthBefore == wholeText.length ||
-
+        //
         // The caretAfter could be earlier than the caretBefore when:
         // - User enters backspace to remove a character.
         // - User finalizes a selection from the candidate window where characters
-        //   are shorter than being typed, e.g. "ni hao" --> "你好".            
-            caretAfter.end < caretBefore.start) {
-
+        //   are shorter than being typed, e.g. "ni hao" --> "你好".
+        if (diff===0 || caretAfter.end < caretBefore.start) {
 
             var textStart  = marker.start,
-                textEnd    = marker.end - (self.lengthBefore - wholeText.length),
+                textEnd    = marker.end - diff,
                 rangeStart = caretAfter.end,
                 rangeEnd   = caretBefore.start,
                 replace    = textStart!==textEnd;
@@ -888,10 +906,13 @@ function(self){ return {
         }
 
         console.log("range", rangeStart, rangeEnd);
-        console.log("text" , textStart, textEnd, text);          
+        console.log("text" , textStart, textEnd, text);        
 
-        // Remember the length of the current text content
-        self.lengthBefore = self._textarea.value.length;
+        // Ensure Opera follows the caretAfter behaviour of other
+        // browsers when typing inside the candidate window.
+        if (operaCandidateWindow) {
+            caretAfter.start = caretAfter.end;
+        }
 
         // Set caretBefore as current caret
         // This is used to track text range when exiting candidate window.
