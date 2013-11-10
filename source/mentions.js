@@ -137,6 +137,8 @@ $.extend(Marker.prototype, {
 
         var marker = this;
 
+        // console.log(marker.end);
+
         // Update text value
         marker.text.nodeValue = str;
 
@@ -817,41 +819,9 @@ function(self){ return {
 
     reflect: function() {
 
-        // When a person presses keydown and releases, keyup will be triggered, e.g.
-        //
-        // keydown -> input -> keyup
-        // 
-        // However, when a person presses keydown and goes into candidate window,
-        // keyup event will not be triggered until the user decides on the final word, e.g.
-        // 
-        // Scenario 1: Typing romanized characters of other language
-        //
-        // keydown -> input (user might be typing inside a candidate window)
-        //         -> input (user is now confirmed typing inside candidate window)
-        //         -> input (user is still inside the candidate window)
-        //         -> input (...)
-        //         -> input (...)
-        //         -> keyup (user has selected from the candidate window)
-        //
-        // Scenario 2: Typing accented characters of other language
-        // 
-        // keydown -> keypress (A key was pressed)
-        //         -> input    (input event triggers after keypress)
-        //         -> keydown  (user is holding A key, candidate window shows up)
-        //         -> keydown  (certain users might hold the A key, which will repeat the keydown event)
-        //         -> keydown  (this will also happen when navigating using arrow keys)
-        //         -> keydown  (...)
-        //         -> keyup    (user has selected from the candidate window)
-        //         -> keydown  (this triggers when user presses a number to select from candidate window)
-        //         -> keyup    (this is the keyup event from the number that was pressed)
-        //         -> keypress (FF Only. Keypress is triggered with character code of the selected candidate)
-        //         -> input    (Input event follows. Triggers in all browsers.)
- 
-        // Determine if user is typing inside a candidate window
-        // by detecting if the input event was triggered more than
-        // once without the occurence of keyup event between them.
+        var textarea = self._textarea,
 
-        var wholeText = self._textarea.value,
+            wholeText = textarea.value,
 
             // Caret position retrieved on keydown event
             // is the position before user enters candidate mode.
@@ -863,71 +833,75 @@ function(self){ return {
 
             // Caret position retrieved on current input event
             // is the position after the character is inserted.
-            caretAfter  = self.caretAfter = self.textarea().caret();
+            caretAfter = self.caretAfter = $(textarea).caret(),
+
+            marker = self.getMarkerAt(caretBefore.start),
+
+            replace = false;
 
             console.log("caretInitial", caretInitial);
             console.log("caretBefore" , caretBefore);
             console.log("caretAfter"  , caretAfter);
 
-        // If input event was triggered with a change in the text content,
-        // but the length of the text content is the same length as before,
-        // it is impossible to tell what has changed, so we replace the entire
-        // text in the marker where the caret is at. This may happen when user
-        // holds a chracter + presses a number to select a character from
-        // the candidate window OR when user navigates between characters
-        // using arrow keys within the candidate window.
-        if (self.lengthBefore == wholeText.length) {
+        // If there is a change in the text content but the length of the
+        // text content is the same length as before, it is impossible to
+        // tell what has changed, so we replace the entire text in the marker
+        // where the caret is at. This happens when:
+        // - User holds a character + presses a number to select a
+        //   character from the candidate window.
+        // - User navigates between characters using arrow keys
+        //   within the candidate window.
+        if (self.lengthBefore == wholeText.length ||
 
-            var marker = self.getMarkerAt(caretBefore.start),
-                text = wholeText.substring(marker.start, marker.end);
+        // The caretAfter could be earlier than the caretBefore when:
+        // - User enters backspace to remove a character.
+        // - User finalizes a selection from the candidate window where characters
+        //   are shorter than being typed, e.g. "ni hao" --> "你好".            
+            caretAfter.end < caretBefore.start) {
 
-            marker.val(text);
+            var textStart  = marker.start,
+                textEnd    = marker.end - (caretBefore.start - caretAfter.end),
+                rangeStart = caretAfter.end,
+                rangeEnd   = caretBefore.start,
+                replace    = textStart!==textEnd;
 
+         // If user is inserting text as usual.
         } else {
 
-            // If user is finalizing the selection from the candidate window
-            if (caretAfter.end < caretBefore.start) {
+            // In Chrome, the caretAfter has a range if the user is typing within the
+            // candidate window. The characters may change due to fuzzy logic suggestions.
+            // You can test this by using Chinese pinyin input and typing "a" then
+            // "asdasdasd" one at a time slowly until you see the difference.
 
-                if (caretInitial.start >= caretBefore.start) {
-
-                    var rangeStart = caretAfter.end,
-                        rangeEnd   = caretBefore.start,
-                        textStart = textEnd = null;
-
-                } else {
-
-                    var rangeStart = caretInitial.start,
-                        rangeEnd   = caretBefore.end,
-                        textStart  = caretInitial.start,
-                        textEnd    = caretAfter.end;
-                }
-
-            // If user is inserting text as usual
-            } else {
-                var rangeStart = caretBefore.start,
-                    rangeEnd   = caretBefore.end,
-                    textStart  = caretBefore.start,
-                    textEnd    = caretAfter.end;
-            }
-
-            var text = 
-                // If user removed text, textStart & textEnd will be identical.
-                textEnd===textStart ? "" :
-                // If user inserted text, extract text.
-                wholeText.substring(textStart, textEnd);
-
-            // Insert text
-            self.insert(text, rangeStart, rangeEnd);
-     
-            console.log("range", rangeStart, rangeEnd);
-            console.log("text" , textStart, textEnd, text);
+            // So, we give prefential treatment to start positions which are earlier
+            // whether it is coming from caretBefore or caretAfter.
+            var rangeStart = textStart = Math.min(caretBefore.start, caretAfter.start),
+                rangeEnd   = caretBefore.end,
+                textEnd    = caretAfter.end;
         }
+
+        // Extract text from the given start and end position
+        var text = wholeText.substring(textStart, textEnd);
+        
+        // If the strategy is to replace a single marker
+        if (replace) {
+            marker.val(text);
+            self.normalize();
+
+        // If the strategy is to insert chracters onto single/multiple markers
+        } else {
+            self.insert(text, rangeStart, rangeEnd);            
+        }
+
+
+        console.log("range", rangeStart, rangeEnd);
+        console.log("text" , textStart, textEnd, text);          
 
         // Remember the length of the current text content
         self.lengthBefore = self._textarea.value.length;
 
         // Set caretBefore as current caret
-        // This is used to track text range when exiting candidate window
+        // This is used to track text range when exiting candidate window.
         self.caretBefore = self.caretAfter;
 
         console.log('----');
