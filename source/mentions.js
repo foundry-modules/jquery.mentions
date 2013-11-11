@@ -319,8 +319,7 @@ $.extend(Marker.prototype, {
             text   : text,
             parent : marker.parent,
             before : marker,
-            after  : marker.after,
-            mutable: marker.mutable
+            after  : marker.after
         });
 
         // Update current marker
@@ -355,11 +354,13 @@ $.Controller("Mentions",
         triggers: {
             "@": {
                 type: "entity",
-                mutable: false
+                wrap: false,
+                stop: " "
             },
             "#": {
                 type: "hashtag",
-                mutable: true
+                wrap: true,
+                stop: " #"
             }
         },
 
@@ -468,7 +469,6 @@ function(self){ return {
                 end,
                 length,
                 br = false,
-                mutable = true,
                 allowSpace = false,
                 nodeType = node.nodeType,
                 nodeName = node.nodeName;
@@ -481,7 +481,6 @@ function(self){ return {
             // then test if node is <br/>, create a detached text node contaning a line break,
             } else if ((block = node) && nodeName=="BR") {
                 text = document.createTextNode("\n");
-                mutable = false;
                 br = true;
             // if this is an invalid node, e.g. node not element, node not span, span has no text child node,
             // remove code from overlay and skip this loop.
@@ -501,7 +500,6 @@ function(self){ return {
                 parent: overlay,
                 before: before,
                 br    : br,
-                mutable: mutable,
                 allowSpace: allowSpace
             });
 
@@ -941,17 +939,47 @@ function(self){ return {
             if (wholeText.charCodeAt(start - 1)===32) {
 
                 // Extract the remaining string after the trigger key
-                var val = marker.text.nodeValue.slice(start),
-                    // Find the first found space, that's where the string ends.
-                    end = val.indexOf(_space);
-                    end = start + ((end < 0) ? val.length : end);
+                // coding #js --> #js
+                var val = marker.text.nodeValue.slice(start), end;
 
-                    // Spawn a new marker from this string
-                    // and convert this marker into a block marker
-                    var spawn = marker.spawn(start, end).toBlockMarker();
+                // If this trigger allows wrapping and
+                // there are remaining characters to wrap.
+                // *#js and*    --> *#js* and
+                // *#js#foobar* --> *#js*#foobar
+                if (trigger.wrap && val.length > 1) {
 
-                    // Update the mutability of the spawned marker
-                    spawn.mutable = trigger.mutable;       
+                    // Our test string should not include the initial 
+                    var test = val.slice(1),
+                        end  = val.length,
+                        stop = trigger.stop,
+                        i    = stop.length;             
+
+                    // Find the first earliest character, that's where the string ends
+                    while (i--) {
+                        var chr = stop.substr(i, 1),
+                            pos = test.indexOf(chr);
+                        end = (pos < 0) ? end : Math.min(end, pos);
+                    }
+
+                    // Add back the start offset
+                    end += start + 1;
+
+                // If trigger does not allow wrapping
+                // *@foobar* --> *@*foobar        
+                } else {
+                    end = start + 1;
+                }
+
+                // Spawn a new marker from this string
+                // and convert this marker into a block marker
+                // *#*          --> [#]
+                // *#js* and    --> [#js] and
+                // *#js*#foobar --> [#js]#foobar
+                // *@*foobar    --> [@]foobar
+                var spawn = marker.spawn(start, end).toBlockMarker();
+
+                // Update the mutability of the spawned marker
+                // spawn.mutable = trigger.mutable;
             }
 
             // console.log(start, marker.text, marker, nodes);
