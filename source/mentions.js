@@ -428,11 +428,25 @@ function(self){ return {
 
     //--- Triggers ----//
 
-    triggered: null,
+    getTrigger: function(key) {
 
-    getTrigger: function(triggerKey) {
+        var triggers = self.options.triggers;
+        if (triggers.hasOwnProperty(key)) return triggers[key];
+    },
 
-        return self.options.triggers[triggerKey || self.triggered];
+    getStopIndex: function(str, stop) {
+
+        var i = stop.length,
+            idx = str.length;
+
+        // Find the first earliest stop character, that's where the string ends
+        while (i--) {
+            var chr = stop.substr(i, 1),
+                pos = str.indexOf(chr);
+            idx = (pos < 0) ? idx : Math.min(idx, pos);
+        }
+
+        return idx;
     },
 
     //--- Marker traversal ----//
@@ -925,13 +939,14 @@ function(self){ return {
 
     "{overlay} markerInsert": function(overlay, event, marker, nodes, str, start, end) {
 
-        var triggers = self.options.triggers,
-            trigger,
-            text = marker.text,
-            wholeText = text.nodeValue;
+        // console.log(start, marker.text, marker, nodes);
+
+        var text = marker.text,
+            wholeText = text.nodeValue,
+            trigger;
 
         // If a trigger key was entered
-        if (triggers.hasOwnProperty(str) && (trigger = triggers[str])) {
+        if (trigger = self.getTrigger(str)) {
 
             // Ensure the character before is a space, e.g.
             // we don't want to listen to @ in an email address.
@@ -941,8 +956,7 @@ function(self){ return {
                 // Extract the remaining string after the trigger key
                 // coding #js --> #js
                 var val = wholeText.slice(start),
-                    content = val.slice(1),
-                    end = val.length;
+                    content = val.slice(1);
 
                 // If this trigger allows wrapping and
                 // there are remaining characters to wrap.
@@ -950,21 +964,11 @@ function(self){ return {
                 // *#js#foobar* --> *#js*#foobar
                 if (trigger.wrap && val.length > 1) {
 
-                    var stop = trigger.stop,
-                        i = stop.length;
-
-                    // Find the first earliest character, that's where the string ends
-                    while (i--) {
-                        var chr = stop.substr(i, 1),
-                            pos = content.indexOf(chr);
-                        end = (pos < 0) ? end : Math.min(end, pos);
-                    }
-
-                    // Add back the start offset
-                    end += start + 1;
+                    // Get stop position, add start offset and trigger key offset.
+                    end = self.getStopIndex(content, trigger.stop) + start + 1;
 
                 // If trigger does not allow wrapping
-                // *@foobar* --> *@*foobar        
+                // *@foobar* --> *@*foobar
                 } else {
                     end = start + 1;
                 }
@@ -980,10 +984,49 @@ function(self){ return {
                 // Trigger triggerCreate event
                 self.trigger("triggerCreate", [spawn, trigger, content]);
             }
-
-            // console.log(start, marker.text, marker, nodes);
         }
 
+        // If we're inside an existing block marker,
+        // determine if we need to mutate the block.
+        if (marker.block && !marker.br) {
+
+            // If this marker is finalized, any changes to the
+            // text content will convert it to a text marker.
+            // [Jensen *#*Tonne] --> Jensen #Tonne
+            // [Jensen Tonn`e`]  --> Jensen Tonn
+            if (marker.finalized) {
+
+                // Convert it to text marker
+                marker.toTextMarker();
+
+                // Trigger triggerDestroyed
+                self.trigger("triggerDestroy", [marker]);
+            }
+
+            // Identify the trigger being used
+            var key = wholeText.slice(0, 1),
+                trigger = self.getTrigger(key);
+
+            // If we could not identify the trigger, skip.
+            if (!trigger) return;
+
+            // Check for occurence of stop character
+            var content = wholeText.slice(1),
+                start = self.getStopIndex(content, trigger.stop) + 1,
+                end = wholeText.length;
+
+            // If the end position is shorter than content length
+            if (start < end) {
+
+                // Spawn out a new marker containing
+                // the remaining text after the block marker.
+                // [#foo* *bar] --> [#foo] bar
+                var spawn = marker.spawn(start, end);
+
+                // Trigger triggerChange event
+                self.trigger("triggerChange", [marker, spawn, trigger]);
+            }
+        }
     },
 
     "{overlay} markerRemove": function(overlay, event, marker) {
