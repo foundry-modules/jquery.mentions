@@ -38,4 +38,4 @@ $.fn.caret = function(start, end) {
         }
         return { start: start, end: end };
     }
-}
+};
