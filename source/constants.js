@@ -1,7 +1,20 @@
 var _backspace = "",
     _space     = " ",
     _nbsp      = "\u00a0",
-    _newline   = "\n";
+    _newline   = "\n",
+    KEYCODE = {
+        BACKSPACE: 8,
+        COMMA: 188,
+        DELETE: 46,
+        DOWN: 40,
+        ENTER: 13,
+        ESCAPE: 27,
+        LEFT: 37,
+        RIGHT: 39,
+        SPACE: 32,
+        TAB: 9,
+        UP: 38
+    };
 
 // TODO: Put this elsewhere
 $.fn.caret = function(start, end) {

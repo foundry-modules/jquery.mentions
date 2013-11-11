@@ -12,18 +12,23 @@ $.Controller("Mentions",
             'direction', 'wordSpacing', 'fontSizeAdjust'
         ],
 
-        triggers: {
-            "@": {
-                type: "entity",
-                wrap: false,
-                stop: " "
-            },
-            "#": {
-                type: "hashtag",
-                wrap: true,
-                stop: " #"
-            }
-        },
+        triggers: {},
+
+        //
+        // Trigger examples
+        //
+        // triggers: {
+        //     "@": {
+        //         type: "entity",
+        //         wrap: false,
+        //         stop: " "
+        //     },
+        //     "#": {
+        //         type: "hashtag",
+        //         wrap: true,
+        //         stop: " #"
+        //     }
+        // },
 
         inspector: false,
 
@@ -71,7 +76,11 @@ function(self){ return {
     getTrigger: function(key) {
 
         var triggers = self.options.triggers;
-        if (triggers.hasOwnProperty(key)) return triggers[key];
+        if (triggers.hasOwnProperty(key)) {
+            var trigger = triggers[key];
+            trigger.key = key;
+            return trigger;
+        }
     },
 
     getStopIndex: function(str, stop) {
@@ -615,31 +624,34 @@ function(self){ return {
 
                 // Trigger triggerDestroyed
                 self.trigger("triggerDestroy", [marker]);
-            }
 
-            // Identify the trigger being used
-            var key = wholeText.slice(0, 1),
-                trigger = self.getTrigger(key);
+            } else {
 
-            // If we could not identify the trigger, skip.
-            if (!trigger) return;
+                // Identify the trigger being used
+                var key = wholeText.slice(0, 1),
+                    trigger = self.getTrigger(key);
 
-            // Check for occurence of stop character
-            var content = wholeText.slice(1),
-                start = self.getStopIndex(content, trigger.stop) + 1,
-                end = wholeText.length;
+                // If we could not identify the trigger, skip.
+                if (!trigger) return;
 
-            // If the end position is shorter than content length
-            if (start < end) {
+                // Check for occurence of stop character
+                var content = wholeText.slice(1),
+                    start = self.getStopIndex(content, trigger.stop) + 1,
+                    end = wholeText.length,
+                    spawn = false;
 
-                // Spawn out a new marker containing
-                // the remaining text after the block marker.
-                // [#foo* *bar] --> [#foo] bar
-                var spawn = marker.spawn(start, end);
+                // If the end position is shorter than content length
+                if (start < end) {
+
+                    // Spawn out a new marker containing
+                    // the remaining text after the block marker.
+                    // [#foo* *bar] --> [#foo] bar
+                    spawn = marker.spawn(start, end);
+                }
 
                 // Trigger triggerChange event
                 self.trigger("triggerChange", [marker, spawn, trigger]);
-            }
+            }     
         }
     },
 
