@@ -926,12 +926,12 @@ function(self){ return {
     "{overlay} markerInsert": function(overlay, event, marker, nodes, str, start, end) {
 
         var triggers = self.options.triggers,
-            trigger;
+            trigger,
+            text = marker.text,
+            wholeText = text.nodeValue;
 
         // If a trigger key was entered
         if (triggers.hasOwnProperty(str) && (trigger = triggers[str])) {
-
-            var wholeText = marker.text.nodeValue;
 
             // Ensure the character before is a space, e.g.
             // we don't want to listen to @ in an email address.
@@ -940,7 +940,9 @@ function(self){ return {
 
                 // Extract the remaining string after the trigger key
                 // coding #js --> #js
-                var val = marker.text.nodeValue.slice(start), end;
+                var val = wholeText.slice(start),
+                    content = val.slice(1),
+                    end = val.length;
 
                 // If this trigger allows wrapping and
                 // there are remaining characters to wrap.
@@ -948,16 +950,13 @@ function(self){ return {
                 // *#js#foobar* --> *#js*#foobar
                 if (trigger.wrap && val.length > 1) {
 
-                    // Our test string should not include the initial 
-                    var test = val.slice(1),
-                        end  = val.length,
-                        stop = trigger.stop,
-                        i    = stop.length;             
+                    var stop = trigger.stop,
+                        i = stop.length;
 
                     // Find the first earliest character, that's where the string ends
                     while (i--) {
                         var chr = stop.substr(i, 1),
-                            pos = test.indexOf(chr);
+                            pos = content.indexOf(chr);
                         end = (pos < 0) ? end : Math.min(end, pos);
                     }
 
@@ -978,8 +977,8 @@ function(self){ return {
                 // *@*foobar    --> [@]foobar
                 var spawn = marker.spawn(start, end).toBlockMarker();
 
-                // Update the mutability of the spawned marker
-                // spawn.mutable = trigger.mutable;
+                // Trigger triggerCreate event
+                self.trigger("triggerCreate", [spawn, trigger, content]);
             }
 
             // console.log(start, marker.text, marker, nodes);
