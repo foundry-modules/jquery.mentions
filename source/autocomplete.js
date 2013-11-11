@@ -202,8 +202,6 @@ function(self){ return {
 			),
 			data = query.data;
 
-		console.log("query", query);
-
 		if (!data) return;
 
 		// Query URL
@@ -532,14 +530,12 @@ function(self){ return {
 			// If enter is pressed, use item
 			case KEYCODE.ENTER:
 
-				// TODO: Use item
-				// Prevent up/down keys from changing textfield cursor position.
-				event.preventDefault();				
+				if (!self.hidden && activeMenuItem) {
+					var item = activeMenuItem.data("item");
+					self.use(item);
+					event.preventDefault();
+				}
 				break;
-
-			// default:
-			// 	self.populateFromMarker();
-			// 	break;
 		}
 
 		// Get newly activated item
@@ -559,14 +555,45 @@ function(self){ return {
 		// Add item
 		var item = menuItem.data("item");
 
-		// TODO: Update marker with item
+		self.use(item);
 
 		// Refocus textarea
 		setTimeout(function(){
 
 			// Due to event delegation, this needs to be slightly delayed.
-			self.mentions.textField.focus();
+			self.mentions.textarea.focus();
 		}, 150);
+	},
+
+	use: function(item) {
+
+		// Get active query
+		var query = self.activeQuery;
+
+		// If there are no active query, stop.
+		if (!query) return;
+
+		var marker = query.marker,
+			title = item.title;
+
+		console.log(item);
+
+		// Replace marker text
+		marker.text.nodeValue = title;
+
+		// Finalize marker
+		marker.finalize();
+
+		// Replace textarea text
+		self.mentions.textareaInsert(title, marker.start, marker.end);
+
+		// Set caret position
+		self.mentions.textarea().caret(marker.start + title.length);
+
+		// Quick hack to prevent repopulation
+		self.hidden = true;
+
+		self.hide();
 	},
 
 	"{menuItem} mouseover": function(menuItem) {

@@ -134,6 +134,8 @@ function(self){ return {
                 end,
                 length,
                 br = false,
+                data = null,
+                finalized = false,
                 allowSpace = false,
                 nodeType = node.nodeType,
                 nodeName = node.nodeName;
@@ -154,6 +156,12 @@ function(self){ return {
                 continue;
             }
 
+            if (block && !br) {
+                var $node = $(node);
+                finalized = !!$node.data("markerFinalized");
+                data = $node.data("markerData");
+            }
+
             // Create marker object
             var marker = new Marker({
                 index : i - 1,
@@ -165,7 +173,9 @@ function(self){ return {
                 parent: overlay,
                 before: before,
                 br    : br,
-                allowSpace: allowSpace
+                allowSpace: allowSpace,
+                finalized: finalized,
+                data: data
             });
 
             // If this is the second iteration, decorate the marker the after property
@@ -609,7 +619,8 @@ function(self){ return {
                 // *#js* and    --> [#js] and
                 // *#js*#foobar --> [#js]#foobar
                 // *@*foobar    --> [@]foobar
-                var spawn = marker.spawn(start, end).toBlockMarker();
+                var spawn = marker.spawn(start, end).toBlockMarker(),
+                    content = spawn.data = spawn.text.nodeValue.slice(1);
 
                 // Trigger triggerCreate event
                 self.trigger("triggerCreate", [spawn, trigger, content]);
@@ -657,7 +668,7 @@ function(self){ return {
                 }
 
                 // Trigger triggerChange event
-                content = marker.text.nodeValue.slice(1);
+                content = marker.data = marker.text.nodeValue.slice(1);
                 self.trigger("triggerChange", [marker, spawn, trigger, content]);
             }     
         }

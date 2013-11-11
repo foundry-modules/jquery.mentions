@@ -199,5 +199,18 @@ $.extend(Marker.prototype, {
         marker.after  = spawn;
 
         return spawn;
+    },
+
+    finalize: function(data) {
+
+        var marker = this,  
+            block = marker.block;
+
+        // Text marker cannot be finalized
+        if (!block) return;
+
+        $(block)
+            .data("markerData", data)
+            .data("markerFinalized", true);
     }
 });
