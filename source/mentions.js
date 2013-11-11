@@ -448,9 +448,6 @@ function(self){ return {
         }
 
         console.log("keyup", caretBefore, caretAfter);
-
-        self.inspect();
-        return;
     },
 
     reflect: function() {
@@ -535,7 +532,7 @@ function(self){ return {
         } else {
             self.insert(text, rangeStart, rangeEnd);            
         }
-        
+
         console.log("range", rangeStart, rangeEnd);
         console.log("text" , textStart, textEnd, text);
 

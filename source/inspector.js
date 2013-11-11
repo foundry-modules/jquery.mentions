@@ -74,7 +74,7 @@ $.Controller("Mentions.Inspector",
         view: {
             item: "mentions/item",
             inspector: "mentions/inspector"
-        }
+        },
 
         "{inspector}": "[data-mentions-inspector]",
 
@@ -102,6 +102,7 @@ function(self){ return {
 
     init: function() {
 
+        self.showInspector();
     },
 
     showInspector: function() {
@@ -122,6 +123,11 @@ function(self){ return {
         self.inspector().hide();
     },
 
+    "{mentions.textarea} keyup": function() {
+
+        self.inspect();
+    },
+
     "{inspector} dblclick": function() {
 
         self.textarea().toggle();
@@ -130,7 +136,7 @@ function(self){ return {
     inspect: $.debounce(function() {
 
         // Selection
-        var caret = self.textarea().caret();
+        var caret = self.mentions.textarea().caret();
 
         self.selectionStart().val(caret.start);
         self.selectionEnd().val(caret.end);
@@ -140,7 +146,7 @@ function(self){ return {
         var triggerKey = self.triggered;
 
         if (triggerKey) {
-            var trigger = self.options.triggers[triggerKey];
+            var trigger = self.getTrigger(triggerKey);
             self.triggerKey().val(triggerKey);
             self.triggerType().val(trigger.type);
             self.triggerBuffer().val(self.buffer);
@@ -151,7 +157,7 @@ function(self){ return {
         }
 
         // Marker
-        var marker = self.getMarkerAt(caret.start);
+        var marker = self.mentions.getMarkerAt(caret.start);
 
         if (marker) {
             self.markerIndex().val(marker.index).data('marker', marker);
