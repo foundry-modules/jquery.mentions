@@ -23,6 +23,8 @@ $.Controller("Mentions.Autocomplete",
 			emptyHint: "mentions/emptyHint"
 		},
 
+		id: "",
+
 		// This is the default query options
 		// applied to all triggers unless
 		// trigger override them.
@@ -42,7 +44,13 @@ $.Controller("Mentions.Autocomplete",
 			my: 'left top',
 			at: 'left bottom',
 			collision: 'none'
-		}
+		},
+
+		"{menu}": "[data-mentions-menu]",
+		"{menuItem}": "[data-mentions-menuItem]",
+		"{viewport}": "[data-mentions-autocomplete-viewport]",
+		"{loadingHint}": "[data-mentions-autocomplete-loading]",
+		"{emptyHint}": "[data-mentions-autocomplete-empty]"		
     }
 },
 function(self){ return {
@@ -57,6 +65,7 @@ function(self){ return {
 			// And reimplement on the context menu we created ourselves
 			self.view.menu()
 				.appendTo("body")
+				.attr("id", self.options.id)
 				.data(self.Class.fullName, true)
 				.addController(self.Class, self.options);
 
@@ -116,19 +125,27 @@ function(self){ return {
 		self.setLayout();
 	},
 
-    "{self} triggerCreate": function(el, event, marker, trigger, content) {
+	currentMarker: null,
 
-    	self.populate(marker, trigger, content);
-    },
+	"{mentions} triggerCreate": function(el, event, marker, trigger, content) {
 
-    "{self} triggerChange": function(el, event, marker, spawn, trigger) {
+		self.populate(marker, trigger, content);
 
-    	self.populate(marker, trigger, marker.text.nodeValue);
-    },
+		self.currentMarker = marker;
+	},
 
-    "{self} triggerDestroy": function(el, event, marker) {
+	"{mentions} triggerChange": function(el, event, marker, spawn, trigger, content) {
 
-    },
+		self.populate(marker, trigger, content);
+
+		self.currentMarker = marker;
+	},
+
+	"{mentions} triggerDestroy": function(el, event, marker) {
+
+	},
+
+	hidden: true,
 
 	show: function() {
 
@@ -175,17 +192,19 @@ function(self){ return {
 
 	query: function(options) {
 
-		if (!query) return;
+		if (!options) return;
 
 		// If options passed in is not an object
 		var query = $.extend(
 				{},
 				self.options.query,
-				$.isPlainObject(options) ? 
-					{data: options} : 
-					options
+				($.isPlainObject(options) ? options : {data: options})
 			),
 			data = query.data;
+
+		console.log("query", query);
+
+		if (!data) return;
 
 		// Query URL
 		if ($.isUrl(data)) {
@@ -232,17 +251,17 @@ function(self){ return {
 
 	delayTask: null,
 
-	populated: false,
+	activeQuery: null,
 
 	populate: function(marker, trigger, keyword) {
 
 		// Create query object
-		var query = self.query(trigger.query),
-			lastQuery = self.lastQuery;
+		var query = self.query(trigger.query);
 
 		if (!query) return;
 
-		self.populated = false;
+		// Set current query as active query
+		self.activeQuery = query;
 
 		// Store data in query
 		query.keyword = keyword;
@@ -253,11 +272,18 @@ function(self){ return {
 		// for event handlers to modify the query object.
 		self.trigger("queryPrepare", [query]);
 
+		// If no keyword given or keyword doesn't meet minimum query length, stop.
+		var keyword = query.keyword;
+		if (keyword==="" || (keyword.length < query.minLength)) {
+			self.hide();
+			return;
+		}
+
 		// Create a query id for this task based on the keyword
 		// and retrieve existing query task for this keyword.
 		var id    = query.id = trigger.key + "|" + (query.caseSensitive) ? keyword : keyword.toLowerCase(),
 			tasks = self.tasks,
-			task  = tasks[id];
+			task  = query.task = tasks[id],
 
 			// Determine if this is a new or existing query task
 			// If query caching is disabled, it will always be a new task.
@@ -325,7 +351,8 @@ function(self){ return {
 
 	"{self} queryStart": function(el, event, query) {
 
-		task.fail(function(){
+		query.task
+			.fail(function(){
 				self.hide();
 			})
 			.always(function(){
@@ -343,7 +370,8 @@ function(self){ return {
 		var mentions = self.mentions,
 			autocomplete = self,
 			element = self.element,
-			menu = self.menu();		
+			menu = self.menu(),
+			keyword = query.keyword;
 
 		// If there are no items, hide menu.
 		if (items.length < 1) {
@@ -437,12 +465,6 @@ function(self){ return {
 		// Prevent autocomplete from falling asleep.
 		clearTimeout(self.sleep);
 
-		// If autocomplete is hidden, don't do anything.
-		if (self.hidden) return;
-
-		// Prevent up/down keys from changing textfield cursor position.
-		event.preventDefault();		
-
 		// Get active menu item
 		var activeMenuItem = self.menuItem(".active:not(.hidden)");
 
@@ -471,6 +493,9 @@ function(self){ return {
 					activeMenuItem.prev(self.menuItem.selector + ':not(.hidden)')
 						.addClass("active");
 				}
+
+				// Prevent up/down keys from changing textfield cursor position.
+				event.preventDefault();
 				break;
 
 			// If down key is pressed
@@ -491,7 +516,10 @@ function(self){ return {
 					// and activate it.
 					activeMenuItem.next(self.menuItem.selector + ':not(.hidden)')
 						.addClass("active");
-				}		
+				}
+
+				// Prevent up/down keys from changing textfield cursor position.
+				event.preventDefault();
 				break;
 
 			// If escape is pressed,
@@ -505,14 +533,22 @@ function(self){ return {
 			case KEYCODE.ENTER:
 
 				// TODO: Use item
+				// Prevent up/down keys from changing textfield cursor position.
+				event.preventDefault();				
 				break;
+
+			// default:
+			// 	self.populateFromMarker();
+			// 	break;
 		}
 
 		// Get newly activated item
 		var activeMenuItem = self.menuItem(".active:not(.hidden)");
 
-		// Scroll menu viewport if it is out of visible area.
-		self.viewport().scrollIntoView(activeMenuItem);
+		if (!self.hidden) {
+			// Scroll menu viewport if it is out of visible area.
+			self.viewport().scrollIntoView(activeMenuItem);
+		}
 	},
 
 	"{menuItem} mouseup": function(menuItem) {

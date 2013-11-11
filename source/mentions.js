@@ -50,6 +50,8 @@ function(self){ return {
         if (self.options.inspector) {
             self.addPlugin("inspector");
         }
+
+        self.addPlugin("autocomplete");
     },
 
     setLayout: function() {
@@ -534,7 +536,12 @@ function(self){ return {
         
         // If the strategy is to replace a single marker
         if (replace) {
+
             marker.val(text);
+
+            // Emulate markerInsert event
+            self.overlay().trigger("markerInsert", marker, [], text, textStart, textEnd);
+
             self.normalize();
 
         // If the strategy is to insert chracters onto single/multiple markers
@@ -650,7 +657,8 @@ function(self){ return {
                 }
 
                 // Trigger triggerChange event
-                self.trigger("triggerChange", [marker, spawn, trigger]);
+                content = marker.text.nodeValue.slice(1);
+                self.trigger("triggerChange", [marker, spawn, trigger, content]);
             }     
         }
     },
