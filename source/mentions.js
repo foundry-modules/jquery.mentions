@@ -1,348 +1,9 @@
-var _backspace = "",
-    _space     = " ",
-    _nbsp      = "\u00a0",
-    _newline   = "\n";
-
-// TODO: Put this elsewhere
-$.fn.caret = function(start, end) {
-
-    if (this.length == 0) return;
-    if (typeof start == 'number')
-    {
-        end = (typeof end == 'number') ? end : start;
-        return this.each(function ()
-        {
-            if (this.setSelectionRange)
-            {
-                this.setSelectionRange(start, end);
-            } else if (this.createTextRange)
-            {
-                var range = this.createTextRange();
-                range.collapse(true);
-                range.moveEnd('character', end);
-                range.moveStart('character', start);
-                try { range.select(); } catch (ex) { }
-            }
-        });
-    } else
-    {
-        if (this[0].setSelectionRange)
-        {
-            start = this[0].selectionStart;
-            end = this[0].selectionEnd;
-        } else if (document.selection && document.selection.createRange)
-        {
-            var range = document.selection.createRange();
-            start = 0 - range.duplicate().moveStart('character', -100000);
-            end = start + range.text.length;
-        }
-        return { start: start, end: end };
-    }
-}
-
-// Constants
-var KEYCODE = {
-    BACKSPACE: 8, 
-    TAB: 9, 
-    ENTER: 13, 
-    ESC: 27, 
-    LEFT: 37, 
-    UP: 38, 
-    RIGHT: 39, 
-    DOWN: 40, 
-    SPACE: 32, 
-    HOME: 36, 
-    END: 35
-};
-
-// Templates
-$.template("mentions/item", '<b>[%= value %]</b>');
-$.template("mentions/inspector", '<div class="mentions-inspector" data-mentions-inspector><fieldset><b>Selection</b><hr/><label>Start</label><input type="text" data-mentions-selection-start/><hr/><label>End</label><input type="text" data-mentions-selection-end/><hr/><label>Length</label><input type="text" data-mentions-selection-length/><hr/></fieldset><fieldset><b>Trigger</b><hr/><label>Key</label><input type="text" data-mentions-trigger-key/><hr/><label>Type</label><input type="text" data-mentions-trigger-type/><hr/><label>Buffer</label><input type="text" data-mentions-trigger-buffer/><hr/></fieldset><hr/> <fieldset><b>Marker</b><hr/><label>Index</label><input type="text" data-mentions-marker-index/><hr/><label>Start</label><input type="text" data-mentions-marker-start/><hr/><label>End</label><input type="text" data-mentions-marker-end/><hr/><label>Length</label><input type="text" data-mentions-marker-length/><hr/><label>Text</label><input type="text" data-mentions-marker-text/><hr/></fieldset><fieldset><b>Block</b><hr/><label>Html</label><input type="text" data-mentions-block-html/><hr/><label>Text</label><input type="text" data-mentions-block-text/><hr/><label>Type</label><input type="text" data-mentions-block-type/><hr/><label>Value</label><input type="text" data-mentions-block-value/><hr/></fieldset></div>');
-
-/*
-<div class="mentions-inspector" data-mentions-inspector>
-    <fieldset>
-        <b>Selection</b>
-        <hr/>
-        <label>Start</label>
-        <input type="text" data-mentions-selection-start/>
-        <hr/>
-        <label>End</label>
-        <input type="text" data-mentions-selection-end/>
-        <hr/>
-        <label>Length</label>
-        <input type="text" data-mentions-selection-length/>
-        <hr/>
-    </fieldset>
-    <fieldset>
-        <b>Trigger</b>
-        <hr/>
-        <label>Key</label>
-        <input type="text" data-mentions-trigger-key/>
-        <hr/>
-        <label>Type</label>
-        <input type="text" data-mentions-trigger-type/>
-        <hr/>
-        <label>Buffer</label>
-        <input type="text" data-mentions-trigger-buffer/>
-        <hr/>
-    </fieldset>
-    <hr/> 
-    <fieldset>
-        <b>Marker</b>
-        <hr/>
-        <label>Index</label>
-        <input type="text" data-mentions-marker-index/>
-        <hr/>
-        <label>Start</label>
-        <input type="text" data-mentions-marker-start/>
-        <hr/>
-        <label>End</label>
-        <input type="text" data-mentions-marker-end/>
-        <hr/>
-        <label>Length</label>
-        <input type="text" data-mentions-marker-length/>
-        <hr/>
-        <label>Text</label>
-        <input type="text" data-mentions-marker-text/>
-        <hr/>
-    </fieldset>
-    <fieldset>
-        <b>Block</b>
-        <hr/>
-        <label>Html</label>
-        <input type="text" data-mentions-block-html/>
-        <hr/>
-        <label>Text</label>
-        <input type="text" data-mentions-block-text/>
-        <hr/>
-        <label>Type</label>
-        <input type="text" data-mentions-block-type/>
-        <hr/>
-        <label>Value</label>
-        <input type="text" data-mentions-block-value/>
-        <hr/>
-    </fieldset>
-</div>
-*/
-
-var Marker = function(options) {
-
-    $.extend(this, options);
-}
-
-$.extend(Marker.prototype, {
-
-    val: function(str) {
-
-        var marker = this;
-
-        // console.log(marker.end);
-
-        // Update text value
-        marker.text.nodeValue = str;
-
-        // Update end & length
-        marker.end = marker.start + (marker.length = str.length);
-
-        return this;
-    },
-
-    insert: function(str, start, end) {
-
-        // Marker
-        var marker    = this,
-            block     = marker.block,
-            br        = marker.br,
-            newline   = str==_newline,
-            space     = str==_space,
-            backspace = str==_backspace,
-            length    = marker.length;
-        
-        // If no start position was given,
-        // assume want to insert at the end of the text.
-        if (start===undefined) start = length;
-
-        // If no end position was given,
-        // assume we want to insert in a single position.
-        if (end===undefined) end = start;
-
-        // If we are at the end of a block marker OR this is a newline block marker,
-        // space & newline should be added to beginning of the next marker.
-        if (block && end==length && !backspace && (space || newline || br)) {
-            return marker.spawn().insert(str, 0);
-        }
-
-        // Nodes
-        var parent = marker.parent,
-            text   = marker.text,
-            next   = block ? block.nextSibling : text.nextSibling,
-
-            // Text
-            val    = text.nodeValue,
-            prefix = val.substring(0, start),
-            suffix = val.slice(end),
-
-            // Chunks
-            // Replace double space with one space and one nbsp to ensure
-            // overlay is rendered proper spacing + identical word-wrap.
-            chunks = str.replace(/  /g, " " + _nbsp).split(_newline),
-            nodes  = [],
-            node   = block || text,
-            i      = chunks.length;         
-
-        // Add the prefix/suffix to the first/last chunk.
-        // If this is a single chunk, the suffix is
-        // actually added to the same chunk. :)
-        chunks[0] = prefix + chunks[0];
-        chunks[i-1] += suffix;
-
-        // If this is a single chunk, this loop won't execute
-        // but we still benefit from having the correct index. :)
-        while (--i) {
-
-            var node = document.createTextNode(chunks[i]),
-                br = document.createElement("BR");
-
-            nodes.push(parent.insertBefore(node, next));
-            nodes.push(parent.insertBefore(br, node));
-
-            next = br;
-        }
-
-        // Update the text value in the current marker
-        marker.val(chunks[i]);
-
-        // Trigger marker for post processing
-        $(parent).trigger("markerInsert", [marker, nodes, str, start, end]);
-
-        return marker;
-    },
-
-    remove: function() {
-
-        var marker = this,
-            parent = marker.parent;
-
-        parent.removeChild(marker.block || marker.text);
-
-        marker.removed = true;
-
-        $(parent).trigger("markerRemove", [marker]);
-
-        return marker;
-    },
-
-    toTextMarker: function(normalize) {
-
-        var marker = this,
-            block  = marker.block,
-            parent = marker.parent;
-
-        if (!block) return marker;
-
-        // Move the text node out and 
-        // place it before the next marker.
-        parent.insertBefore(marker.text, block.nextSibling);
-
-        // Remove the block node
-        parent.removeChild(block);
-        delete marker.block;
-
-        // Normalizing will join 2 separated
-        // text nodes together forming a single marker.
-        normalize && parent.normalize();
-
-        $(marker.parent).trigger("markerConvert", [this, "text", normalize]);
-
-        return marker;
-    },
-
-    toBlockMarker: function(normalize) {
-
-        var marker = this;
-
-        // If this is a block marker, skip.
-        if (marker.block) return;
-
-        var parent = marker.parent,
-            block = marker.block = document.createElement("SPAN"),
-            text  = marker.text;
-
-        // Insert block before the next marker
-        parent.insertBefore(block, text.nextSibling);
-
-        // Move text inside block marker
-        block.appendChild(text);
-
-        // Normalizing will join 2 separated
-        // text nodes together forming a single marker.
-        normalize && parent.normalize();
-
-        $(marker.parent).trigger("markerConvert", [this, "block", normalize]);
-
-        return marker;
-    },
-
-    spawn: function(start, end) {
-
-        var marker = this,
-            text   = marker.text,
-            parent = marker.parent,
-            block  = marker.block,
-            next   = block ? block.nextSibling : text.nextSibling;
-
-        // If not start and end position was given, assume that
-        // we're spawning an empty marker next to the current marker.
-        // [hello] --> [hello[]
-        if (start===undefined) {
-            start = end = marker.length;
-        }
-
-        // If we're spawning in text in the middle,
-        // split out the end marker and insert it before the next marker.
-        // [he*ll*o] --> [he*ll*][o]
-        if (end < marker.length) {
-            next = parent.insertBefore(text.splitText(end), next);
-        } 
-
-        // Split out the text
-        // [he*ll*][o] --> [he][ll][o]
-        text = parent.insertBefore(text.splitText(start), next);
-
-        // Create marker object from new text object
-        var spawn = new Marker({
-            index  : marker.index + 1,
-            start  : (start = marker.start + start),
-            end    : (end = marker.start + end),
-            length : end - start,
-            text   : text,
-            parent : marker.parent,
-            before : marker,
-            after  : marker.after
-        });
-
-        // Update current marker
-        marker.end    = start,
-        marker.length = marker.end - marker.start;
-        marker.after  = spawn;
-
-        return spawn;
-    }
-});
-
-
 $.Controller("Mentions",
 {
     pluginName: "mentions",
     hostname: "mentions",
 
     defaultOptions: {
-
-        view: {
-            item: "mentions/item",
-            inspector: "mentions/inspector"
-        },
 
         cssCloneProps: [
             'lineHeight', 'textDecoration', 'letterSpacing',
@@ -366,27 +27,6 @@ $.Controller("Mentions",
 
         inspector: false,
 
-        "{inspector}": "[data-mentions-inspector]",
-
-        "{selectionStart}" : "[data-mentions-selection-start]",
-        "{selectionEnd}"   : "[data-mentions-selection-end]",
-        "{selectionLength}": "[data-mentions-selection-length]",
-
-        "{markerIndex}" : "[data-mentions-marker-index]",
-        "{markerStart}" : "[data-mentions-marker-start]",
-        "{markerEnd}"   : "[data-mentions-marker-end]",
-        "{markerLength}": "[data-mentions-marker-length]",
-        "{markerText}"  : "[data-mentions-marker-text]",
-
-        "{blockText}" : "[data-mentions-block-text]",
-        "{blockHtml}" : "[data-mentions-block-html]",
-        "{blockType}" : "[data-mentions-block-type]",
-        "{blockValue}": "[data-mentions-block-value]",
-
-        "{triggerKey}" : "[data-mentions-trigger-key]",
-        "{triggerType}" : "[data-mentions-trigger-type]",
-        "{triggerBuffer}" : "[data-mentions-trigger-buffer]",
-
         "{textarea}": "[data-mentions-textarea]",
         "{overlay}" : "[data-mentions-overlay]",
         "{block}"   : "[data-mentions-overlay] > span"
@@ -402,9 +42,9 @@ function(self){ return {
         
         self.cloneLayout();
 
-        // Temporarily set to true
-        self.options.inspector = true;
-        self.showInspector();
+        if (self.options.inspector) {
+            self.addPlugin("inspector");
+        }
     },
 
     setLayout: function() {
@@ -738,33 +378,10 @@ function(self){ return {
          the next course of action at test no. 2.
     */
 
-    lengthBefore: null,
-
-    caretBefore: null,
-
-    caretAfter: null,
-
+    lengthBefore: 0,
+    caretBefore: {start: 0, end: 0},
+    caretAfter: {start: 0, end: 0},
     skipKeydown: false,
-
-    "{textarea} beforecut": function() {
-
-        console.log("BEFORECUT", arguments);
-    },
-
-    "{textarea} beforepaste": function() {
-
-        console.log("BEFOREPASTE", arguments);
-    },
-
-    "{textarea} cut": function(el, event) {
-
-        console.log("CUT", arguments);
-    },
-
-    "{textarea} paste": function() {
-
-        console.log("PASTE", arguments);
-    },    
 
     "{textarea} keydown": function(textarea, event) {
 
@@ -830,7 +447,7 @@ function(self){ return {
             self.overlay().css('opacity', 1);
         }
 
-        console.log("keyup", event.which || event.keyCode, textarea.caret());
+        console.log("keyup", caretBefore, caretAfter);
 
         self.inspect();
         return;
@@ -918,7 +535,7 @@ function(self){ return {
         } else {
             self.insert(text, rangeStart, rangeEnd);            
         }
-
+        
         console.log("range", rangeStart, rangeEnd);
         console.log("text" , textStart, textEnd, text);
 
@@ -1029,95 +646,16 @@ function(self){ return {
         }
     },
 
-    "{overlay} markerRemove": function(overlay, event, marker) {
+    // Events available for use
+    "{overlay} markerRemove": function(overlay, event, marker) {},
+    "{overlay} markerConvert": function(overlay, event, marker, type) {},
+    "{self} triggerCreate": function(el, event, marker, trigger, content) {},
+    "{self} triggerDestroy": function(el, event, marker) {},
+    "{self} triggerChange": function(el, event, marker, spawn, trigger) {},
 
-    },
-
-    "{overlay} markerConvert": function(overlay, event, marker, type) {
-
-    },
-
-    //--- Inspector ----//
-
-    showInspector: function() {
-
-        // If inspector hasn't been created yet
-        if (self.inspector().length < 1) {
-
-            // Create inspector and append to textfield
-            self.view.inspector()
-                .appendTo(self.element);
-        }
-
-        self.inspector().show();
-    },
-
-    hideInspector: function() {
-
-        self.inspector().hide();
-    },
-
-    "{inspector} dblclick": function() {
-
-        self.textarea().toggle();
-    },
-
-    inspect: $.debounce(function() {
-
-        // Selection
-        var caret = self.textarea().caret();
-
-        self.selectionStart().val(caret.start);
-        self.selectionEnd().val(caret.end);
-        self.selectionLength().val(caret.end - caret.start);
-
-        // Trigger
-        var triggerKey = self.triggered;
-
-        if (triggerKey) {
-            var trigger = self.options.triggers[triggerKey];
-            self.triggerKey().val(triggerKey);
-            self.triggerType().val(trigger.type);
-            self.triggerBuffer().val(self.buffer);
-        } else {
-            self.triggerKey().val('');
-            self.triggerType().val('');
-            self.triggerBuffer().val('');
-        }
-
-        // Marker
-        var marker = self.getMarkerAt(caret.start);
-
-        if (marker) {
-            self.markerIndex().val(marker.index).data('marker', marker);
-            self.markerStart().val(marker.start);
-            self.markerEnd().val(marker.end);
-            self.markerLength().val(marker.length);
-            self.markerText().val(marker.text.nodeValue);
-        } else {
-            self.markerIndex().val('').data('marker', null);
-            self.markerStart().val('');
-            self.markerEnd().val('');
-            self.markerLength().val('');
-            self.markerText().val('');
-        }
-
-        // Block
-        var block = (marker || {}).block;
-
-        if (block) {
-            self.blockText().val(marker.text.nodeValue);
-            self.blockHtml().val($(block).clone().toHTML());
-            // TODO: Retrieve block type & value 
-        } else {
-            self.blockText().val('');
-            self.blockHtml().val('');
-        }
-
-    }, 25),
-
-    "{markerIndex} click": function(el) {
-        console.dir(el.data("marker"));
-    }
-
+    // TODO: Better support for cut & paste
+    "{textarea} beforecut": function() { console.log("BEFORECUT", arguments); },
+    "{textarea} beforepaste": function() { console.log("BEFOREPASTE", arguments); },
+    "{textarea} cut": function(el, event) { console.log("CUT", arguments); },
+    "{textarea} paste": function() { console.log("PASTE", arguments); }
 }});
