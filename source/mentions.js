@@ -354,11 +354,11 @@ $.Controller("Mentions",
 
         triggers: {
             "@": {
-                type: 'entity',
+                type: "entity",
                 mutable: false
             },
             "#": {
-                type: 'hashtag',
+                type: "hashtag",
                 mutable: true
             }
         },
@@ -933,19 +933,28 @@ function(self){ return {
         // If a trigger key was entered
         if (triggers.hasOwnProperty(str) && (trigger = triggers[str])) {
 
-            if (trigger.mutable) {
+            var wholeText = marker.text.nodeValue;
+
+            // Ensure the character before is a space, e.g.
+            // we don't want to listen to @ in an email address.
+            // or a # that is not intended to be a hashtag.
+            if (wholeText.charCodeAt(start - 1)===32) {
+
                 // Extract the remaining string after the trigger key
                 var val = marker.text.nodeValue.slice(start),
                     // Find the first found space, that's where the string ends.
                     end = val.indexOf(_space);
                     end = start + ((end < 0) ? val.length : end);
+
+                    // Spawn a new marker from this string
+                    // and convert this marker into a block marker
+                    var spawn = marker.spawn(start, end).toBlockMarker();
+
+                    // Update the mutability of the spawned marker
+                    spawn.mutable = trigger.mutable;       
             }
 
-            // Spawn a new marker from this string
-            // and convert this marker into a block marker
-            var spawn = marker.spawn(start, end).toBlockMarker();
-            // Update the mutability of the spawned marker
-            spawn.mutable = trigger.mutable;
+            // console.log(start, marker.text, marker, nodes);
         }
 
     },
