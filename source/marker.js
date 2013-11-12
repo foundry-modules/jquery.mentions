@@ -18,7 +18,7 @@ $.extend(Marker.prototype, {
         // Update end & length
         marker.end = marker.start + (marker.length = str.length);
 
-        return this;
+        return marker;
     },
 
     insert: function(str, start, end) {
@@ -148,6 +148,9 @@ $.extend(Marker.prototype, {
         // Move text inside block marker
         block.appendChild(text);
 
+        // Create empty marker data
+        $(block).data("marker", {});        
+
         // Normalizing will join 2 separated
         // text nodes together forming a single marker.
         normalize && parent.normalize();
@@ -185,14 +188,18 @@ $.extend(Marker.prototype, {
 
         // Create marker object from new text object
         var spawn = new Marker({
-            index  : marker.index + 1,
-            start  : (start = marker.start + start),
-            end    : (end = marker.start + end),
-            length : end - start,
-            text   : text,
-            parent : marker.parent,
-            before : marker,
-            after  : marker.after
+            index     : marker.index + 1,
+            start     : (start = marker.start + start),
+            end       : (end = marker.start + end),
+            length    : end - start,
+            text      : text,
+            parent    : parent,
+            textarea  : marker.textarea,
+            before    : marker,
+            after     : marker.after,
+            br        : false,
+            allowSpace: true,
+            finalized : false
         });
 
         // Update current marker
@@ -203,7 +210,7 @@ $.extend(Marker.prototype, {
         return spawn;
     },
 
-    finalize: function(data) {
+    finalize: function(value) {
 
         var marker = this,  
             block = marker.block;
@@ -211,8 +218,10 @@ $.extend(Marker.prototype, {
         // Text marker cannot be finalized
         if (!block) return;
 
-        $(block)
-            .data("markerData", data)
-            .data("markerFinalized", true);
+        var data = $(block).data("marker");
+            data.value = value;
+            data.finalized = true;
+
+        $.extend(marker, data);
     }
 });

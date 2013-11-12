@@ -14,22 +14,6 @@ $.Controller("Mentions",
 
         triggers: {},
 
-        //
-        // Trigger examples
-        //
-        // triggers: {
-        //     "@": {
-        //         type: "entity",
-        //         wrap: false,
-        //         stop: " "
-        //     },
-        //     "#": {
-        //         type: "hashtag",
-        //         wrap: true,
-        //         stop: " #"
-        //     }
-        // },
-
         inspector: false,
 
         "{textarea}": "[data-mentions-textarea]",
@@ -102,17 +86,20 @@ function(self){ return {
 
     //--- Marker traversal ----//
 
-    forEachMarker: function(callback) {
+    getMarkers: function(callback) {
 
-        var overlay = self._overlay,
+        var textarea = self._textarea,
+            overlay = self._overlay,
             nodes = overlay.childNodes,
             node,
             i = 0,
             start = 0,
             before = null,
-            result = [],
             skip = false,
+            results = [],
             iterator = function(marker) {
+
+                var ret;
 
                 // Execute callback while passing in marker object
                 if (callback) ret = callback.apply(marker, [marker]);
@@ -122,24 +109,23 @@ function(self){ return {
                 // null      - don't add anything to the result list
                 // undefined - add the same marker object to the result list
                 // value     - add the value to the result list
-                if (ret!==null && ret!==false) result.push(ret===undefined ? ret : marker);
+                if (ret!==null && ret!==false) results.push(ret!==undefined ? ret : marker);
 
                 return ret; // if ret is false, the parent loop will stop
             };
 
         while (node = nodes[i++]) {
 
-            var text,
-                block = null,
-                end,
-                length,
-                br = false,
-                data = null,
-                trigger = null,
-                finalized = false,
-                allowSpace = false,
-                nodeType = node.nodeType,
-                nodeName = node.nodeName;
+            // Nodes
+            var nodeType = node.nodeType,
+                nodeName = node.nodeName,
+                text, block = null,
+
+                // Marker positions
+                end, length,
+
+                // Marker behaviour
+                br = false, allowSpace = false;
 
             // If this is a text node, assign this node as marker text
             if (nodeType==3) {
@@ -148,39 +134,40 @@ function(self){ return {
             // else assign this node as marker block,
             // then test if node is <br/>, create a detached text node contaning a line break,
             } else if ((block = node) && nodeName=="BR") {
-                text = document.createTextNode("\n");
+                text = document.createTextNode(_newline);
                 br = true;
             // if this is an invalid node, e.g. node not element, node not span, span has no text child node,
             // remove code from overlay and skip this loop.
             } else if (nodeType!==1 || nodeName!=="SPAN" || !(text = node.childNodes[0]) || text.nodeType!==3) {
                 overlay.removeChild(node);
                 continue;
+            }            
+
+            // Create marker props
+            var props = {
+                    index     : i - 1,
+                    start     : start,
+                    end       : (end = start + (length = text.length)),
+                    length    : length,
+                    text      : text,
+                    block     : block,                    
+                    parent    : overlay,
+                    textarea  : textarea,
+                    before    : before,
+                    br        : br,
+                    allowSpace: allowSpace,
+                    finalized : false
+                };
+
+            // Create marker data
+            if (block) {
+                var $node = $(node), data = $node.data("marker");
+                if (!data) (data = {}) && $node.data("marker", data);
+                $.extend(props, data);
             }
 
-            if (block && !br) {
-                var $node = $(node);
-                finalized = !!$node.data("markerFinalized");
-                data = $node.data("markerData");
-                trigger = $node.data("markerTrigger");
-                console.log(data);
-            }
-
-            // Create marker object
-            var marker = new Marker({
-                index : i - 1,
-                start : start,
-                end   : (end = start + (length = text.length)),
-                length: length,
-                text  : text,
-                block : block,
-                parent: overlay,
-                before: before,
-                br    : br,
-                allowSpace: allowSpace,
-                finalized: finalized,
-                data: data,
-                trigger: trigger
-            });
+            // Create marker
+            var marker = new Marker(props);
 
             // If this is the second iteration, decorate the marker the after property
             // of the marker before this with the current marker.
@@ -200,16 +187,14 @@ function(self){ return {
         // Execute iterator one more time for the last marker
         if (!skip) iterator(before);
 
-        return result;
+        return results;
     },
 
     getMarkerAt: function(pos) {
 
         if (pos===undefined) return;
 
-        var marker;
-
-        self.forEachMarker(function(){
+        return self.getMarkers(function(){
 
             // If position is inside current node,
             // stop and return marker.
@@ -217,40 +202,38 @@ function(self){ return {
                 marker = this;
                 return false;
             }
-        });
-
-        return marker;
+        })[0];
     },
 
     getMarkersBetween: function(start, end) {
 
         if (start===undefined) return;
 
-        return self.forEachMarker(function(){
+        return self.getMarkers(function(){
 
             return (this.start > end) ? false : (this.end < start) ? null : this;
         });
     },
 
-    data: function() {
+    toArray: function(stringify, asc) {
 
-        var data = [];
-
-        self.forEachMarker(function(){
+        var results = self.getMarkers(function(){
 
             var marker = this;
 
             if (!marker.block || marker.br || !marker.trigger) return null;
 
-            data.push({
-                start: marker.start,
-                length: marker.length,
-                type: marker.trigger.type,
-                value: marker.data
-            });
+            var data = {
+                start  : marker.start,
+                length : marker.length,
+                type   : marker.trigger.type,
+                value  : marker.data
+            };
+
+            return (stringify) ? JSON.stringify(data) : data;
         });
 
-        return data;
+        return (asc) ? results : results.reverse();
     },
 
     //--- Marker/overlay/text manipulation ---//
@@ -596,8 +579,6 @@ function(self){ return {
         // Set caretBefore as current caret
         // This is used to track text range when exiting candidate window.
         self.caretBefore = self.caretAfter;
-
-        // console.log('----');
     },
 
     //--- Marker Events ----//
@@ -620,14 +601,14 @@ function(self){ return {
 
                 // Extract the remaining string after the trigger key
                 // coding #js --> #js
-                var val = wholeText.slice(start),
-                    content = val.slice(1);
+                var remainingText = wholeText.slice(start),
+                    content = remainingText.slice(1);
 
                 // If this trigger allows wrapping and
                 // there are remaining characters to wrap.
                 // *#js and*    --> *#js* and
                 // *#js#foobar* --> *#js*#foobar
-                if (trigger.wrap && val.length > 1) {
+                if (trigger.wrap && remainingText.length > 1) {
 
                     // Get stop position, add start offset and trigger key offset.
                     end = self.getStopIndex(content, trigger.stop) + start + 1;
@@ -645,12 +626,12 @@ function(self){ return {
                 // *#js*#foobar --> [#js]#foobar
                 // *@*foobar    --> [@]foobar
                 var spawn = marker.spawn(start, end).toBlockMarker(),
-                    content = spawn.text.nodeValue.slice(1);
+                    content = spawn.val().slice(1);
 
                 // Update data
-                $(spawn.block)
-                    .data("markerData", content)
-                    .data("markerTrigger", trigger);
+                var data = $(spawn.block).data("marker");
+                    data.value = content;
+                    data.trigger = trigger;                
 
                 // Trigger triggerCreate event
                 self.trigger("triggerCreate", [spawn, trigger, content]);
@@ -698,15 +679,15 @@ function(self){ return {
                 }
 
                 // Trigger triggerChange event
-                content = marker.text.nodeValue.slice(1);
+                content = marker.val().slice(1);
 
                 // Update data
-                $(marker.block)
-                    .data("markerData", content)
-                    .data("markerTrigger", trigger);
+                var data = $(marker.block).data("marker");
+                    data.value = content;
+                    data.trigger = trigger;
 
                 self.trigger("triggerChange", [marker, spawn, trigger, content]);
-            }     
+            }
         }
     }
 
