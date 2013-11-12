@@ -57,6 +57,14 @@ function(self){ return {
         self.setLayout();
     },
 
+    reset: function() {
+
+        self.overlay().empty();
+        self.textarea().val("");
+        self.caretBefore = self.caretAfter = {start: 0, end: 0};
+        self.normalize();
+    },
+
     //--- Triggers ----//
 
     getTrigger: function(key) {
@@ -194,7 +202,9 @@ function(self){ return {
 
         if (pos===undefined) return;
 
-        return self.getMarkers(function(){
+        var marker;
+
+        self.getMarkers(function(){
 
             // If position is inside current node,
             // stop and return marker.
@@ -202,7 +212,9 @@ function(self){ return {
                 marker = this;
                 return false;
             }
-        })[0];
+        });
+
+        return marker;
     },
 
     getMarkersBetween: function(start, end) {
@@ -227,7 +239,7 @@ function(self){ return {
                 start  : marker.start,
                 length : marker.length,
                 type   : marker.trigger.type,
-                value  : marker.data
+                value  : marker.value
             };
 
             return (stringify) ? JSON.stringify(data) : data;
@@ -345,6 +357,7 @@ function(self){ return {
         //   an empty text node ensure overlay accomodates
         //   the height of the newline.
         var last = overlay.lastChild;
+
         if (!last || last.nodeName==="BR") {
             overlay.appendChild(document.createTextNode(""));
         }
@@ -450,11 +463,9 @@ function(self){ return {
         self.reflect();
 
         // Extra precaution in case overlay goes wrong,
-        // user can start all over again by clearing
-        // the textarea.
+        // user can start all over again by reseting mentions.
         if (textarea.val().length < 1) {
-            self.overlay().empty();
-            self.normalize();
+            self.reset();
         }                
     },
 
