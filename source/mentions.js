@@ -234,7 +234,7 @@ function(self){ return {
 
         var marker, offset;
 
-        console.log("before", self._overlay.childNodes);
+        // console.log("before", self._overlay.childNodes);
 
         // If we are inserting character(s)    
         if (start===end || end===undefined) {
@@ -358,7 +358,7 @@ function(self){ return {
         // textarea after it has been changed.
         self.lengthBefore = textarea.value.length;
 
-        console.log("after", overlay.childNodes);
+        // console.log("after", overlay.childNodes);
     },
 
     //--- Key events & caret handling ---//
@@ -417,7 +417,7 @@ function(self){ return {
             self.overlay().css('opacity', 0);
         }
 
-        console.log("keydown", event.which, caret);        
+        // console.log("keydown", event.which, caret);        
 
         self.skipKeydown = true;
     },
@@ -426,7 +426,7 @@ function(self){ return {
     // it will trigger on well-formed characters.
     "{textarea} keypress": function(textarea, event) {
 
-        console.log("keypress");
+        // console.log("keypress");
 
         // This will help on situations where user
         // holds an arrow key + presses another character.
@@ -468,7 +468,7 @@ function(self){ return {
             self.overlay().css('opacity', 1);
         }
 
-        console.log("keyup", caretBefore, caretAfter);
+        // console.log("keyup", caretBefore, caretAfter);
     },
 
     reflect: function() {
@@ -502,8 +502,8 @@ function(self){ return {
             }
         }
 
-        console.log("caretBefore", caretBefore.start, caretBefore.end);
-        console.log("caretAfter" , caretAfter.start , caretAfter.end);
+        // console.log("caretBefore", caretBefore.start, caretBefore.end);
+        // console.log("caretAfter" , caretAfter.start , caretAfter.end);
 
         // If there is a change in the text content but the length of the
         // text content is the same length as before, it is impossible to
@@ -559,8 +559,8 @@ function(self){ return {
             self.insert(text, rangeStart, rangeEnd);            
         }
 
-        console.log("range", rangeStart, rangeEnd);
-        console.log("text" , textStart, textEnd, text);
+        // console.log("range", rangeStart, rangeEnd);
+        // console.log("text" , textStart, textEnd, text);
 
         // Ensure Opera follows the caretAfter behaviour of other
         // browsers when typing inside the candidate window.
@@ -572,7 +572,7 @@ function(self){ return {
         // This is used to track text range when exiting candidate window.
         self.caretBefore = self.caretAfter;
 
-        console.log('----');
+        // console.log('----');
     },
 
     //--- Marker Events ----//
@@ -672,18 +672,18 @@ function(self){ return {
                 self.trigger("triggerChange", [marker, spawn, trigger, content]);
             }     
         }
-    },
+    }
 
     // Events available for use
-    "{overlay} markerRemove": function(overlay, event, marker) {},
-    "{overlay} markerConvert": function(overlay, event, marker, type) {},
-    "{self} triggerCreate": function(el, event, marker, trigger, content) {},
-    "{self} triggerDestroy": function(el, event, marker) {},
-    "{self} triggerChange": function(el, event, marker, spawn, trigger) {},
+    // "{overlay} markerRemove": function(overlay, event, marker) {},
+    // "{overlay} markerConvert": function(overlay, event, marker, type) {},
+    // "{self} triggerCreate": function(el, event, marker, trigger, content) {},
+    // "{self} triggerDestroy": function(el, event, marker) {},
+    // "{self} triggerChange": function(el, event, marker, spawn, trigger) {},
 
     // TODO: Better support for cut & paste
-    "{textarea} beforecut": function() { console.log("BEFORECUT", arguments); },
-    "{textarea} beforepaste": function() { console.log("BEFOREPASTE", arguments); },
-    "{textarea} cut": function(el, event) { console.log("CUT", arguments); },
-    "{textarea} paste": function() { console.log("PASTE", arguments); }
+    // "{textarea} beforecut": function() { console.log("BEFORECUT", arguments); },
+    // "{textarea} beforepaste": function() { console.log("BEFOREPASTE", arguments); },
+    // "{textarea} cut": function(el, event) { console.log("CUT", arguments); },
+    // "{textarea} paste": function() { console.log("PASTE", arguments); }
 }});
