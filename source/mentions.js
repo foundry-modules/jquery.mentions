@@ -608,7 +608,7 @@ function(self){ return {
             // Ensure the character before is a space, e.g.
             // we don't want to listen to @ in an email address.
             // or a # that is not intended to be a hashtag.
-            if (wholeText.charCodeAt(start - 1)===32) {
+            if (marker.index===0 || wholeText.charCodeAt(start - 1)===32) {
 
                 // Extract the remaining string after the trigger key
                 // coding #js --> #js
