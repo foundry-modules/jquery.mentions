@@ -135,6 +135,7 @@ function(self){ return {
                 length,
                 br = false,
                 data = null,
+                trigger = null,
                 finalized = false,
                 allowSpace = false,
                 nodeType = node.nodeType,
@@ -160,6 +161,8 @@ function(self){ return {
                 var $node = $(node);
                 finalized = !!$node.data("markerFinalized");
                 data = $node.data("markerData");
+                trigger = $node.data("markerTrigger");
+                console.log(data);
             }
 
             // Create marker object
@@ -175,7 +178,8 @@ function(self){ return {
                 br    : br,
                 allowSpace: allowSpace,
                 finalized: finalized,
-                data: data
+                data: data,
+                trigger: trigger
             });
 
             // If this is the second iteration, decorate the marker the after property
@@ -226,6 +230,27 @@ function(self){ return {
 
             return (this.start > end) ? false : (this.end < start) ? null : this;
         });
+    },
+
+    data: function() {
+
+        var data = [];
+
+        self.forEachMarker(function(){
+
+            var marker = this;
+
+            if (!marker.block || marker.br || !marker.trigger) return null;
+
+            data.push({
+                start: marker.start,
+                length: marker.length,
+                type: marker.trigger.type,
+                value: marker.data
+            });
+        });
+
+        return data;
     },
 
     //--- Marker/overlay/text manipulation ---//
@@ -620,7 +645,12 @@ function(self){ return {
                 // *#js*#foobar --> [#js]#foobar
                 // *@*foobar    --> [@]foobar
                 var spawn = marker.spawn(start, end).toBlockMarker(),
-                    content = spawn.data = spawn.text.nodeValue.slice(1);
+                    content = spawn.text.nodeValue.slice(1);
+
+                // Update data
+                $(spawn.block)
+                    .data("markerData", content)
+                    .data("markerTrigger", trigger);
 
                 // Trigger triggerCreate event
                 self.trigger("triggerCreate", [spawn, trigger, content]);
@@ -668,7 +698,13 @@ function(self){ return {
                 }
 
                 // Trigger triggerChange event
-                content = marker.data = marker.text.nodeValue.slice(1);
+                content = marker.text.nodeValue.slice(1);
+
+                // Update data
+                $(marker.block)
+                    .data("markerData", content)
+                    .data("markerTrigger", trigger);
+
                 self.trigger("triggerChange", [marker, spawn, trigger, content]);
             }     
         }

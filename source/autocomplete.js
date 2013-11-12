@@ -561,7 +561,7 @@ function(self){ return {
 		setTimeout(function(){
 
 			// Due to event delegation, this needs to be slightly delayed.
-			self.mentions.textarea.focus();
+			self.mentions.textarea().focus();
 		}, 150);
 	},
 
@@ -576,13 +576,13 @@ function(self){ return {
 		var marker = query.marker,
 			title = item.title;
 
-		console.log(item);
-
 		// Replace marker text
 		marker.text.nodeValue = title;
 
+		delete item["menuHtml"];
+
 		// Finalize marker
-		marker.finalize();
+		marker.finalize(item);
 
 		// Replace textarea text
 		self.mentions.textareaInsert(title, marker.start, marker.end);
