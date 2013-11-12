@@ -8,7 +8,9 @@ $.extend(Marker.prototype, {
 
         var marker = this;
 
-        // console.log(marker.end);
+        if (str===undefined) {
+            return marker.text.nodeValue;
+        }
 
         // Update text value
         marker.text.nodeValue = str;
