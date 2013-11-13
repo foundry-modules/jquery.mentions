@@ -62,6 +62,7 @@ function(self){ return {
         self.overlay().empty();
         self.textarea().val("");
         self.caretBefore = self.caretAfter = {start: 0, end: 0};
+        self.previousMarker = null;
         self.normalize();
     },
 
@@ -421,6 +422,7 @@ function(self){ return {
     caretBefore: {start: 0, end: 0},
     caretAfter: {start: 0, end: 0},
     skipKeydown: false,
+    previousMarker: null,
 
     "{textarea} keydown": function(textarea, event) {
 
@@ -522,6 +524,19 @@ function(self){ return {
         // TODO: Figure out the pattern, usually when typed too early.
         if (!marker) return;
 
+        var previousMarker = self.previousMarker,
+            block = marker.block;
+
+        if (previousMarker) {
+
+            var previousBlock = previousMarker.block,
+                finalize = (previousMarker.trigger || {}).finalize;
+
+            if (previousBlock && finalize && !previousBlock.finalized && previousBlock!==block) {
+                previousMarker.toTextMarker();
+            }
+        }  
+
         // console.log("caretBefore", caretBefore.start, caretBefore.end);
         // console.log("caretAfter" , caretAfter.start , caretAfter.end);
 
@@ -607,6 +622,8 @@ function(self){ return {
             wholeText = text.nodeValue,
             trigger;
 
+        self.previousMarker = null;
+
         // If a trigger key was entered
         if (trigger = self.getTrigger(str)) {
 
@@ -647,7 +664,9 @@ function(self){ return {
                 // Update data
                 var data = $(spawn.block).data("marker");
                     data.value = content;
-                    data.trigger = trigger;                
+                    data.trigger = trigger;
+
+                self.previousMarker = spawn;
 
                 // Trigger triggerCreate event
                 self.trigger("triggerCreate", [spawn, trigger, content]);
@@ -699,6 +718,8 @@ function(self){ return {
                 var data = $(marker.block).data("marker");
                     data.value = content;
                     data.trigger = trigger;
+
+                self.previousMarker = marker;
 
                 self.trigger("triggerChange", [marker, spawn, trigger, content]);
             }

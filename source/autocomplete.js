@@ -141,8 +141,9 @@ function(self){ return {
 		self.currentMarker = marker;
 	},
 
-	"{mentions} triggerDestroy": function(el, event, marker) {
+	"{mentions.block} triggerDestroy": function(el, event, marker) {
 
+		self.hide();
 	},
 
 	hidden: true,
