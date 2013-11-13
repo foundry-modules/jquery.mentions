@@ -56,7 +56,7 @@ $.extend(Marker.prototype, {
 
         // If no end position was given,
         // assume we want to insert in a single position.
-        if (end===undefined) end = start;            
+        if (end===undefined) end = start;
 
         // If this block marker already has a trailing space
         // but the block marker hasn't been finalized yet.
@@ -73,7 +73,6 @@ $.extend(Marker.prototype, {
                 $textarea
                     .val(wholeText.substring(0, offset) + wholeText.slice(offset + 1))
                     .caret(pos);
-
             }
 
             // Convert to text marker
@@ -85,7 +84,7 @@ $.extend(Marker.prototype, {
 
         // If we are at the end of a block marker OR this is a newline block marker,
         // space & newline should be added to beginning of the next marker.
-        if (block && end==length && !backspace && (spawnSpace || newline || br)) {
+        if (block && end==length && !backspace && (spawnSpace || newline || br || finalized)) {
             return marker.spawn().insert(str, 0);
         }
 
@@ -103,7 +102,7 @@ $.extend(Marker.prototype, {
             chunks = str.replace(/  /g, " " + _nbsp).split(_newline),
             nodes  = [],
             node   = block || text,
-            i      = chunks.length;         
+            i      = chunks.length;
 
         // Add the prefix/suffix to the first/last chunk.
         // If this is a single chunk, the suffix is
@@ -136,9 +135,13 @@ $.extend(Marker.prototype, {
     remove: function() {
 
         var marker = this,
-            parent = marker.parent;
+            parent = marker.parent,
+            block = marker.block,
+            text = marker.text;
 
-        parent.removeChild(marker.block || marker.text);
+        if (block) $(block).trigger("triggerDestroy", [marker]);
+
+        parent.removeChild(block || text);
 
         marker.removed = true;
 
@@ -157,6 +160,8 @@ $.extend(Marker.prototype, {
 
         // Create a copy of the old marker
         var old = marker.clone();
+
+        if (block) $(block).trigger("triggerDestroy", [marker]);
 
         // Move the text node out and 
         // place it before the next marker.

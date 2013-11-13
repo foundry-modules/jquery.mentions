@@ -297,8 +297,7 @@ function(self){ return {
                 // Convert block marker into text marker
                 // [doe] --> doe
                 // hello [john] [doe] --> hello [john] doe
-                // TODO: Maybe this should be done by post-processors.
-                // if (marker.block) marker.toTextMarker();
+                if (marker.block && end > marker.start) marker.toTextMarker();
 
                 // Remove characters from text marker
                 // doe --> e
@@ -519,6 +518,10 @@ function(self){ return {
             }
         }
 
+        // In case there was an issue retrieving marker.
+        // TODO: Figure out the pattern, usually when typed too early.
+        if (!marker) return;
+
         // console.log("caretBefore", caretBefore.start, caretBefore.end);
         // console.log("caretAfter" , caretAfter.start , caretAfter.end);
 
@@ -563,6 +566,12 @@ function(self){ return {
         
         // If the strategy is to replace a single marker
         if (replace) {
+
+            // If text being replaced is not identical on
+            // a finalized marker, then convert to text marker.
+            if (marker.val()!==text && marker.finalized) {
+                marker.toTextMarker();
+            }
 
             marker.val(text);
 
@@ -655,11 +664,9 @@ function(self){ return {
             // [Jensen Tonn`e`]  --> Jensen Tonn
             if (marker.finalized) {
 
-                // Convert it to text marker
-                marker.toTextMarker();
+                var length = marker.length;
 
-                // Trigger triggerDestroyed
-                self.trigger("triggerDestroy", [marker]);
+                if (end < length - 1) marker.toTextMarker();
 
             } else {
 
