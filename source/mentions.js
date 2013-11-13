@@ -149,23 +149,23 @@ function(self){ return {
             } else if (nodeType!==1 || nodeName!=="SPAN" || !(text = node.childNodes[0]) || text.nodeType!==3) {
                 overlay.removeChild(node);
                 continue;
-            }            
+            }
 
             // Create marker props
             var props = {
-                    index     : i - 1,
-                    start     : start,
-                    end       : (end = start + (length = text.length)),
-                    length    : length,
-                    text      : text,
-                    block     : block,                    
-                    parent    : overlay,
-                    textarea  : textarea,
-                    before    : before,
-                    br        : br,
-                    allowSpace: allowSpace,
-                    finalized : false
-                };
+                index     : i - 1,
+                start     : start,
+                end       : (end = start + (length = text.length)),
+                length    : length,
+                text      : text,
+                block     : block,               
+                parent    : overlay,
+                textarea  : textarea,
+                before    : before,
+                br        : br,
+                allowSpace: allowSpace,
+                finalized : false
+            };
 
             // Create marker data
             if (block) {
@@ -253,8 +253,6 @@ function(self){ return {
     insert: function(str, start, end) {
 
         var marker, offset;
-
-        // console.log("before", self._overlay.childNodes);
 
         // If we are inserting character(s)    
         if (start===end || end===undefined) {
@@ -595,8 +593,6 @@ function(self){ return {
     //--- Marker Events ----//
 
     "{overlay} markerInsert": function(overlay, event, marker, nodes, str, start, end) {
-
-        // console.log(start, marker.text, marker, nodes);
 
         var text = marker.text,
             wholeText = text.nodeValue,

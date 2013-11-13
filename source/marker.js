@@ -24,35 +24,69 @@ $.extend(Marker.prototype, {
     insert: function(str, start, end) {
 
         // Marker
-        var marker    = this,
-            block     = marker.block,
-            br        = marker.br,
-            newline   = str==_newline,
-            space     = str==_space,
-            backspace = str==_backspace,
-            length    = marker.length;
-        
+        var marker     = this,
+            block      = marker.block,
+            text       = marker.text,
+            br         = marker.br,
+            val        = marker.val(),
+            length     = marker.length,
+
+            // Character flags
+            newline    = str==_newline,
+            space      = str==_space,
+            backspace  = str==_backspace,
+
+            // Trigger
+            trigger = marker.trigger || {},
+            finalize = trigger.finalize,
+            finalized = marker.finalized,
+
+            // Spaces
+            // We need to insert space in a spawned marker when:
+            //  - space is not allowed in block marker
+            //  - space is allowed in block marker
+            //    but there's already a trailing space.            
+            trailingSpace = val.charCodeAt(start - 1)==32,
+            allowSpace    = trigger.allowSpace || marker.allowSpace,
+            spawnSpace    = space && (!allowSpace || (allowSpace && trailingSpace));
+
         // If no start position was given,
         // assume want to insert at the end of the text.
         if (start===undefined) start = length;
 
         // If no end position was given,
         // assume we want to insert in a single position.
-        if (end===undefined) end = start;
+        if (end===undefined) end = start;            
+
+        // If this block marker already has a trailing space
+        // but the block marker hasn't been finalized yet.
+        if (block && space && allowSpace && trailingSpace && !finalized) {
+
+            var $textarea = $(marker.textarea),
+                wholeText = $textarea.val();
+                pos       = $textarea.caret().end - 1,
+                offset    = marker.start + start;
+
+            // Reverse the insertion on textarea
+            $textarea
+                .val(wholeText.substring(0, offset) + wholeText.slice(offset + 1))
+                .caret(pos);
+
+            // Convert to text marker
+            return marker.toTextMarker();
+        }
 
         // If we are at the end of a block marker OR this is a newline block marker,
         // space & newline should be added to beginning of the next marker.
-        if (block && end==length && !backspace && (space || newline || br)) {
+        if (block && end==length && !backspace && (spawnSpace || newline || br)) {
             return marker.spawn().insert(str, 0);
         }
 
         // Nodes
         var parent = marker.parent,
-            text   = marker.text,
             next   = block ? block.nextSibling : text.nextSibling,
 
             // Text
-            val    = text.nodeValue,
             prefix = val.substring(0, start),
             suffix = val.slice(end),
 
@@ -106,13 +140,16 @@ $.extend(Marker.prototype, {
         return marker;
     },
 
-    toTextMarker: function(normalize) {
+    toTextMarker: function() {
 
         var marker = this,
             block  = marker.block,
             parent = marker.parent;
 
         if (!block) return marker;
+
+        // Create a copy of the old marker
+        var old = marker.clone();
 
         // Move the text node out and 
         // place it before the next marker.
@@ -121,12 +158,9 @@ $.extend(Marker.prototype, {
         // Remove the block node
         parent.removeChild(block);
         delete marker.block;
+        delete marker.trigger;
 
-        // Normalizing will join 2 separated
-        // text nodes together forming a single marker.
-        normalize && parent.normalize();
-
-        $(marker.parent).trigger("markerConvert", [this, "text", normalize]);
+        $(marker.parent).trigger("markerConvert", [marker, old, "text"]);
 
         return marker;
     },
@@ -138,7 +172,8 @@ $.extend(Marker.prototype, {
         // If this is a block marker, skip.
         if (marker.block) return;
 
-        var parent = marker.parent,
+        var old = marker.clone(),
+            parent = marker.parent,
             block = marker.block = document.createElement("SPAN"),
             text  = marker.text;
 
@@ -149,13 +184,9 @@ $.extend(Marker.prototype, {
         block.appendChild(text);
 
         // Create empty marker data
-        $(block).data("marker", {});        
+        $(block).data("marker", {});
 
-        // Normalizing will join 2 separated
-        // text nodes together forming a single marker.
-        normalize && parent.normalize();
-
-        $(marker.parent).trigger("markerConvert", [this, "block", normalize]);
+        $(marker.parent).trigger("markerConvert", [marker, old, "block"]);
 
         return marker;
     },
@@ -208,6 +239,13 @@ $.extend(Marker.prototype, {
         marker.after  = spawn;
 
         return spawn;
+    },
+
+    clone: function() {
+
+        return new Marker(
+            $._pick(this, "index,start,end,length,text,parent,textarea,before,after,br,allowSpace,trigger,value,finalized".split(","))
+        );
     },
 
     finalize: function(value) {
