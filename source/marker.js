@@ -60,20 +60,27 @@ $.extend(Marker.prototype, {
 
         // If this block marker already has a trailing space
         // but the block marker hasn't been finalized yet.
-        if (block && space && allowSpace && trailingSpace && !finalized) {
-
-            var $textarea = $(marker.textarea),
-                wholeText = $textarea.val();
-                pos       = $textarea.caret().end - 1,
-                offset    = marker.start + start;
+        if (block && allowSpace && trailingSpace && !finalized) {
 
             // Reverse the insertion on textarea
-            $textarea
-                .val(wholeText.substring(0, offset) + wholeText.slice(offset + 1))
-                .caret(pos);
+            if (space) {
+
+                var $textarea = $(marker.textarea),
+                    wholeText = $textarea.val();
+                    pos       = $textarea.caret().end - 1,
+                    offset    = marker.start + start;
+
+                $textarea
+                    .val(wholeText.substring(0, offset) + wholeText.slice(offset + 1))
+                    .caret(pos);
+
+            }
 
             // Convert to text marker
-            return marker.toTextMarker();
+            marker.toTextMarker();
+            
+            // For other characters, restart text insertion process.
+            return (space) ? marker : marker.insert(str, start, end);
         }
 
         // If we are at the end of a block marker OR this is a newline block marker,
@@ -244,7 +251,7 @@ $.extend(Marker.prototype, {
     clone: function() {
 
         return new Marker(
-            $._pick(this, "index,start,end,length,text,parent,textarea,before,after,br,allowSpace,trigger,value,finalized".split(","))
+            $.pick(this, "index,start,end,length,text,parent,textarea,before,after,br,allowSpace,trigger,value,finalized".split(","))
         );
     },
 
