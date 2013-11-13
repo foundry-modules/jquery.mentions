@@ -532,8 +532,13 @@ function(self){ return {
             var previousBlock = previousMarker.block,
                 finalize = (previousMarker.trigger || {}).finalize;
 
+            // TODO: Make this less temperamental.
             if (previousBlock && finalize && !previousBlock.finalized && previousBlock!==block) {
-                previousMarker.toTextMarker();
+                try {
+                    previousMarker.toTextMarker();
+                } catch(e) {
+                    self.previousMarker = null;
+                }
             }
         }  
 
