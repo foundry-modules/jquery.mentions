@@ -101,8 +101,6 @@ $.Controller("Mentions.Inspector",
 function(self){ return {
 
     init: function() {
-
-        self.showInspector();
     },
 
     showInspector: function() {
@@ -116,11 +114,15 @@ function(self){ return {
         }
 
         self.inspector().show();
+
+        self.mentions.overlay().css("color", "green");
     },
 
     hideInspector: function() {
 
         self.inspector().hide();
+
+        self.mentions.overlay().css("color", "transparent");
     },
 
     "{mentions.textarea} keyup": function() {

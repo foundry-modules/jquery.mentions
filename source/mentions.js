@@ -32,10 +32,15 @@ function(self){ return {
         self.cloneLayout();
 
         if (self.options.inspector) {
-            self.addPlugin("inspector");
+            self.inspect();
         }
 
         self.addPlugin("autocomplete");
+    },
+
+    inspect: function() {
+        self.inspector = self.addPlugin("inspector");
+        self.inspector.showInspector();
     },
 
     setLayout: function() {
