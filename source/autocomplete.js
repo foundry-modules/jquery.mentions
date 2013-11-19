@@ -1,9 +1,10 @@
-$.template("mentions/menu", '<div class="mentions-autocomplete" data-mentions-autocomplete><div class="mentions-autocomplete-inner" data-mentions-autocomplete-viewport><div class="mentions-autocomplete-loading" data-mentions-autocomplete-loading></div><div class="mentions-autocomplete-empty" data-mentions-autocomplete-empty></div><ul class="mentions-menu" data-mentions-menu></ul></div></div>');
+$.template("mentions/menu", '<div class="mentions-autocomplete" data-mentions-autocomplete><b><b></b></b><div class="mentions-autocomplete-inner" data-mentions-autocomplete-viewport><div class="mentions-autocomplete-loading" data-mentions-autocomplete-loading></div><div class="mentions-autocomplete-empty" data-mentions-autocomplete-empty></div><ul class="mentions-menu" data-mentions-menu></ul></div></div>');
 $.template("mentions/menuItem", '<li class="mentions-menuItem" data-mentions-menuItem>[%== html %]</li>');
 $.template("mentions/loadingHint", '<i class="mentions-autocomplete-loading-indicator"></i>');
 $.template("mentions/emptyHint", '<span class="mentions-autocomplete-empty-text">No items found.</span>');
 /*
 <div class="mentions-autocomplete" data-mentions-autocomplete>
+	<b><b></b></b>
 	<div class="mentions-autocomplete-inner" data-mentions-autocomplete-viewport>
 		<div class="mentions-autocomplete-loading" data-mentions-autocomplete-loading></div>
 		<div class="mentions-autocomplete-empty" data-mentions-autocomplete-empty></div>
@@ -46,6 +47,11 @@ $.Controller("Mentions.Autocomplete",
 			collision: 'none'
 		},
 
+        size: {
+            width: "auto",
+            height: "auto"
+        },
+
 		"{menu}": "[data-mentions-menu]",
 		"{menuItem}": "[data-mentions-menuItem]",
 		"{viewport}": "[data-mentions-autocomplete-viewport]",
@@ -78,7 +84,9 @@ function(self){ return {
 		mentions.pluginInstances["autocomplete"] = self;
 
 		// Set the position to be relative to the mentions
-		self.options.position.of = self.mentions.element;
+		if (!self.options.position.of) {
+			self.options.position.of = self.mentions.element;	
+		}
 
 		// Loading hint
 		self.view.loadingHint()
@@ -96,10 +104,23 @@ function(self){ return {
 
 		if (!self.hidden) {
 
+            var options = self.options,
+                size = options.size,
+                width = self.mentions.element.outerWidth(),
+                height = "auto";
+
+            if ($.isFunction(size.width)) {
+                width = size.width(width);
+            }
+
+            if ($.isFunction(size.height)) {
+                height = size.height(height);
+            }
+
 			self.element
 				.css({
 					opacity: 1,
-					width: self.mentions.element.outerWidth()
+					width: width
 				})
 				.position(self.options.position);
 		}
