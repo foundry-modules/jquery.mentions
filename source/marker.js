@@ -27,6 +27,7 @@ $.extend(Marker.prototype, {
         var marker     = this,
             block      = marker.block,
             text       = marker.text,
+            parent     = marker.parent,
             br         = marker.br,
             val        = marker.val(),
             length     = marker.length,
@@ -45,7 +46,7 @@ $.extend(Marker.prototype, {
             // We need to insert space in a spawned marker when:
             //  - space is not allowed in block marker
             //  - space is allowed in block marker
-            //    but there's already a trailing space.            
+            //    but there's already a trailing space.
             trailingSpace = val.charCodeAt(start - 1)==32,
             allowSpace    = trigger.allowSpace || marker.allowSpace,
             spawnSpace    = space && (!allowSpace || (allowSpace && trailingSpace));
@@ -66,7 +67,7 @@ $.extend(Marker.prototype, {
             if (space) {
 
                 var $textarea = $(marker.textarea),
-                    wholeText = $textarea.val();
+                    wholeText = $textarea.val(),
                     pos       = $textarea.caret().end - 1,
                     offset    = marker.start + start;
 
@@ -77,9 +78,16 @@ $.extend(Marker.prototype, {
 
             // Convert to text marker
             marker.toTextMarker();
-            
+
+            // TODO: Refactor this
+            if (space) {
+                // Trigger marker for post processing
+                $(parent).trigger("markerInsert", [marker, nodes, str, start, end]);
+                return marker;
             // For other characters, restart text insertion process.
-            return (space) ? marker : marker.insert(str, start, end);
+            } else {
+                return marker.insert(str, start, end);
+            }
         }
 
         // If we are at the end of a block marker OR this is a newline block marker,
@@ -89,8 +97,7 @@ $.extend(Marker.prototype, {
         }
 
         // Nodes
-        var parent = marker.parent,
-            next   = block ? block.nextSibling : text.nextSibling,
+        var next   = block ? block.nextSibling : text.nextSibling,
 
             // Text
             prefix = val.substring(0, start),
