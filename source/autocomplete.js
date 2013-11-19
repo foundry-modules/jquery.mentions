@@ -123,6 +123,11 @@ function(self){ return {
 					width: width
 				})
 				.position(self.options.position);
+
+			setTimeout(function(){
+				self.viewport()
+					.addClass("active");
+			}, 1);
 		}
 	},
 
@@ -179,6 +184,8 @@ function(self){ return {
 
 		self.hidden = false;
 
+		self.viewport().removeClass("active");
+
 		self.setLayout();
 	},
 
@@ -196,6 +203,8 @@ function(self){ return {
 				item   : activeMenuItem.data("item")
 			};
 		}
+
+		self.viewport().removeClass("active");
 
 		menuItem.removeClass("active");
 
