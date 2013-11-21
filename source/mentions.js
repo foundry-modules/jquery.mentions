@@ -69,6 +69,8 @@ function(self){ return {
         self.caretBefore = self.caretAfter = {start: 0, end: 0};
         self.previousMarker = null;
         self.normalize();
+
+        self.trigger("triggerClear");
     },
 
     //--- Triggers ----//

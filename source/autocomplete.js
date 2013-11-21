@@ -172,6 +172,11 @@ function(self){ return {
 		self.hide();
 	},
 
+	"{mentions} triggerClear": function() {
+
+		self.hide();
+	},
+
 	hidden: true,
 
 	show: function() {
