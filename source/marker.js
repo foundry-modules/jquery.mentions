@@ -96,6 +96,29 @@ $.extend(Marker.prototype, {
             return marker.spawn().insert(str, 0);
         }
 
+        // Quick monkey patch for typing before a block marker
+        // in the beginning of the textarea.
+        if (block && marker.index===0 && marker.start===0 && str.length===1) {
+
+            var textnode = document.createTextNode(str);
+            parent.insertBefore(textnode, block);
+
+            var newMarker = new Marker({
+                index: 0,
+                start: 0,
+                end: str.length,
+                text: textnode,
+                parent: parent,
+                textarea: marker.textarea,
+                allowSpace: true,
+            });
+
+            // Trigger marker for post processing
+            $(parent).trigger("markerInsert", [newMarker, nodes, str, start, end]);
+
+            return newMarker;
+        }
+
         // Nodes
         var next   = block ? block.nextSibling : text.nextSibling,
 
