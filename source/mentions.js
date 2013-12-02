@@ -7,8 +7,8 @@ $.Controller("Mentions",
 
         cssCloneProps: [
             'lineHeight', 'textDecoration', 'letterSpacing',
-            'fontSize', 'fontFamily', 'fontStyle', 
-            'fontWeight', 'textTransform', 'textAlign', 
+            'fontSize', 'fontFamily', 'fontStyle',
+            'fontWeight', 'textTransform', 'textAlign',
             'direction', 'wordSpacing', 'fontSizeAdjust'
         ],
 
@@ -28,7 +28,7 @@ function(self){ return {
         // Speed up access to overlay
         self._overlay  = self.overlay()[0];
         self._textarea = self.textarea()[0];
-        
+
         self.cloneLayout();
 
         if (self.options.inspector) {
@@ -64,10 +64,31 @@ function(self){ return {
 
     reset: function() {
 
-        self.overlay().empty();
-        self.textarea().val("");
+        // Overlay
+        var overlay = self.overlay(),
+            overlayDefault = overlay.data("mentionsOverlayDefault");
+
+        if (overlayDefault !== undefined) {
+            // TODO: Use $.toHTML() in the future
+            // after all is on 3.1.11.
+            overlay.html($('<div>').html(overlayDefault).html());
+        } else {
+            overlay.empty();
+        }
+
+        // Textarea
+        var textarea = self.textarea(),
+            textareaDefault = textarea.data("mentionsTextareaDefault");
+
+        if (textareaDefault !== undefined) {
+            textarea.val($('<div>').html(textareaDefault).text());
+        } else {
+            textarea.val("");
+        }
+
         self.caretBefore = self.caretAfter = {start: 0, end: 0};
         self.previousMarker = null;
+
         self.normalize();
 
         self.trigger("triggerClear");
@@ -166,7 +187,7 @@ function(self){ return {
                 end       : (end = start + (length = text.length)),
                 length    : length,
                 text      : text,
-                block     : block,               
+                block     : block,
                 parent    : overlay,
                 textarea  : textarea,
                 before    : before,
@@ -191,7 +212,7 @@ function(self){ return {
                 before.after = marker;
                 // Execute iterator for the marker before this
                 // If iterator returned false, stop the loop.
-                if (skip = (iterator(before)===false)) break; 
+                if (skip = (iterator(before)===false)) break;
             }
 
             // Else reset start position and
@@ -262,7 +283,7 @@ function(self){ return {
 
         var marker, offset;
 
-        // If we are inserting character(s)    
+        // If we are inserting character(s)
         if (start===end || end===undefined) {
 
             // Get marker & offset
@@ -444,7 +465,7 @@ function(self){ return {
             self.overlay().css('opacity', 0);
         }
 
-        // console.log("keydown", event.which, caret);        
+        // console.log("keydown", event.which, caret);
 
         self.skipKeydown = true;
     },
@@ -472,7 +493,7 @@ function(self){ return {
         // user can start all over again by reseting mentions.
         if (textarea.val().length < 1) {
             self.reset();
-        }                
+        }
     },
 
     "{textarea} keyup": function(textarea, event) {
@@ -523,7 +544,7 @@ function(self){ return {
         // browsers when typing inside the candidate window.
         if (operaCandidateWindow) {
             if (caretBefore.start!==caretBefore.end) {
-                caretBefore.end += diff;     
+                caretBefore.end += diff;
             }
         }
 
@@ -547,7 +568,7 @@ function(self){ return {
                     self.previousMarker = null;
                 }
             }
-        }  
+        }
 
         // console.log("caretBefore", caretBefore.start, caretBefore.end);
         // console.log("caretAfter" , caretAfter.start , caretAfter.end);
@@ -590,7 +611,7 @@ function(self){ return {
 
         // Extract text from the given start and end position
         var text = wholeText.substring(textStart, textEnd);
-        
+
         // If the strategy is to replace a single marker
         if (replace) {
 
@@ -609,7 +630,7 @@ function(self){ return {
 
         // If the strategy is to insert chracters onto single/multiple markers
         } else {
-            self.insert(text, rangeStart, rangeEnd);            
+            self.insert(text, rangeStart, rangeEnd);
         }
 
         // console.log("range", rangeStart, rangeEnd);
