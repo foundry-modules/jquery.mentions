@@ -266,7 +266,21 @@ function(self){ return {
 
             var marker = this;
 
-            if (!marker.block || marker.br || !marker.trigger) return null;
+            if (!marker.block || marker.br) return null;
+
+            // If there's no trigger, try to find it.
+            if (!marker.trigger) {
+
+                // Identify the trigger being used
+                var wholeText = marker.text.nodeValue,
+                    key = wholeText.slice(0, 1),
+                    trigger = self.getTrigger(key);
+
+                if (!trigger) return;
+
+                marker.trigger = trigger;
+                marker.value = wholeText.slice(1);
+            }
 
             var data = {
                 start  : marker.start,
