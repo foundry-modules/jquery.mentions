@@ -98,7 +98,7 @@ $.extend(Marker.prototype, {
 
         // Quick monkey patch for typing before a block marker
         // in the beginning of the textarea.
-        if (block && marker.index===0 && marker.start===0 && str.length===1) {
+        if (block && marker.index===0 && end===0 && str.length===1) {
 
             var textnode = document.createTextNode(str);
             parent.insertBefore(textnode, block);
@@ -193,7 +193,7 @@ $.extend(Marker.prototype, {
 
         if (block) $(block).trigger("triggerDestroy", [marker]);
 
-        // Move the text node out and 
+        // Move the text node out and
         // place it before the next marker.
         parent.insertBefore(marker.text, block.nextSibling);
 
@@ -253,7 +253,7 @@ $.extend(Marker.prototype, {
         // [he*ll*o] --> [he*ll*][o]
         if (end < marker.length) {
             next = parent.insertBefore(text.splitText(end), next);
-        } 
+        }
 
         // Split out the text
         // [he*ll*][o] --> [he][ll][o]
@@ -292,7 +292,7 @@ $.extend(Marker.prototype, {
 
     finalize: function(value) {
 
-        var marker = this,  
+        var marker = this,
             block = marker.block;
 
         // Text marker cannot be finalized
