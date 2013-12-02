@@ -481,6 +481,8 @@ function(self){ return {
 
     "{textarea} keydown": function(textarea, event) {
 
+        self.initialFocus = false;
+
         // If keydown event has been fired multiple times
         // this might mean the user has entered candidate
         // window and we should not do anything.
