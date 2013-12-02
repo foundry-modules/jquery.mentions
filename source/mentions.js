@@ -36,6 +36,8 @@ function(self){ return {
         }
 
         self.addPlugin("autocomplete");
+
+        self.initialCaret = self.textarea().data("initial") || 0;
     },
 
     inspect: function() {
@@ -66,7 +68,7 @@ function(self){ return {
 
         // Overlay
         var overlay = self.overlay(),
-            overlayDefault = overlay.data("mentionsOverlayDefault");
+            overlayDefault = overlay.data("default");
 
         if (overlayDefault !== undefined) {
             // TODO: Use $.toHTML() in the future
@@ -78,7 +80,7 @@ function(self){ return {
 
         // Textarea
         var textarea = self.textarea(),
-            textareaDefault = textarea.data("mentionsTextareaDefault");
+            textareaDefault = textarea.data("default");
 
         if (textareaDefault !== undefined) {
             textarea.val($('<div>').html(textareaDefault).text());
@@ -90,6 +92,8 @@ function(self){ return {
         self.previousMarker = null;
 
         self.normalize();
+
+        self.initialFocus = true;
 
         self.trigger("triggerClear");
     },
@@ -465,6 +469,15 @@ function(self){ return {
     caretAfter: {start: 0, end: 0},
     skipKeydown: false,
     previousMarker: null,
+
+    initialFocus: true,
+
+    "{textarea} focus": function() {
+
+        if (self.initialFocus) {
+            self.textarea().caret(self.initialCaret || 0);
+        }
+    },
 
     "{textarea} keydown": function(textarea, event) {
 
