@@ -340,6 +340,10 @@ function(self){ return {
                     marker.remove();
                 }
 
+                // If we're in the beginning of the textarea,
+                // convert block into text marker.
+                if (marker.block && marker.index===0 && start===0) marker.toTextMarker();
+
                 // Insert characters in the first marker
                 // hello -> hexxxe
                 marker.insert(str, start - marker.start, marker.length);
@@ -422,7 +426,17 @@ function(self){ return {
        - and press enter
        - and press backspace
 
-    3. Typing accented character.
+    3. Repeat step 2 with range starting at a block marker where caret is at:
+       - the beginning
+       - the middle
+       - the end
+       of the block marker and also when block marker is at:
+       - the beginning
+       - the middle
+       - the end
+       of the textarea.
+
+    4. Typing accented character.
        Hold a key until candidate window shows up, then:
        - Press a number
        - Release key, then press a number
@@ -431,11 +445,11 @@ function(self){ return {
        - Click on a candidate to select a character
        - Press backspace until candidate window dissappears
 
-    4. Typing romanized-to-unicode (Chinese/Japanese/Arabian/etc) characters.
+    5. Typing romanized-to-unicode (Chinese/Japanese/Arabian/etc) characters.
        Type multiple characters in the candidate window, then proceed with
-       the next course of action at test no. 3.
+       the next course of action at test no. 4.
 
-    5. Pressing enter continously to create multiple newlines:
+    6. Pressing enter continously to create multiple newlines:
        - at the beginning of the textarea
        - at the middle of marker/text
        - at the end of textarea
