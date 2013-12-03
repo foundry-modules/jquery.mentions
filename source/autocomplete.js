@@ -1,6 +1,7 @@
-$.template("mentions/menu", '<div class="mentions-autocomplete" data-mentions-autocomplete><b><b></b></b><div class="mentions-autocomplete-inner" data-mentions-autocomplete-viewport><div class="mentions-autocomplete-loading" data-mentions-autocomplete-loading></div><div class="mentions-autocomplete-empty" data-mentions-autocomplete-empty></div><ul class="mentions-menu" data-mentions-menu></ul></div></div>');
+$.template("mentions/menu", '<div class="mentions-autocomplete" data-mentions-autocomplete><b><b></b></b><div class="mentions-autocomplete-inner" data-mentions-autocomplete-viewport><div class="mentions-autocomplete-loading" data-mentions-autocomplete-loading></div><div class="mentions-autocomplete-empty" data-mentions-autocomplete-empty></div><div class="mentions-autocomplete-search" data-mentions-autocomplete-search></div><ul class="mentions-menu" data-mentions-menu></ul></div></div>');
 $.template("mentions/menuItem", '<li class="mentions-menuItem" data-mentions-menuItem>[%== html %]</li>');
 $.template("mentions/loadingHint", '<i class="mentions-autocomplete-loading-indicator"></i>');
+$.template("mentions/searchHint", '<span class="mentions-autocomplete-search-hint">Type a keyword to begin.</span>');
 $.template("mentions/emptyHint", '<span class="mentions-autocomplete-empty-text">No items found.</span>');
 /*
 <div class="mentions-autocomplete" data-mentions-autocomplete>
@@ -8,6 +9,7 @@ $.template("mentions/emptyHint", '<span class="mentions-autocomplete-empty-text"
 	<div class="mentions-autocomplete-inner" data-mentions-autocomplete-viewport>
 		<div class="mentions-autocomplete-loading" data-mentions-autocomplete-loading></div>
 		<div class="mentions-autocomplete-empty" data-mentions-autocomplete-empty></div>
+		<div class="mentions-autocomplete-search" data-mentions-autocomplete-search></div>
 		<ul class="mentions-menu" data-mentions-menu></ul>
 	</div>
 </div>
@@ -20,6 +22,7 @@ $.Controller("Mentions.Autocomplete",
 		view: {
 			menu: "mentions/menu",
 			menuItem: "mentions/menuItem",
+			searchHint: "mentions/searchHint",
 			loadingHint: "mentions/loadingHint",
 			emptyHint: "mentions/emptyHint"
 		},
@@ -37,6 +40,7 @@ $.Controller("Mentions.Autocomplete",
 			highlight: true,
 			caseSensitive: false,
 			exclusive: false,
+			searchHint: false,
 			loadingHint: false,
 			emptyHint: false
 		},
@@ -56,7 +60,8 @@ $.Controller("Mentions.Autocomplete",
 		"{menuItem}": "[data-mentions-menuItem]",
 		"{viewport}": "[data-mentions-autocomplete-viewport]",
 		"{loadingHint}": "[data-mentions-autocomplete-loading]",
-		"{emptyHint}": "[data-mentions-autocomplete-empty]"		
+		"{emptyHint}": "[data-mentions-autocomplete-empty]",
+		"{searchHint}": "[data-mentions-autocomplete-search]"
     }
 },
 function(self){ return {
@@ -85,7 +90,7 @@ function(self){ return {
 
 		// Set the position to be relative to the mentions
 		if (!self.options.position.of) {
-			self.options.position.of = self.mentions.element;	
+			self.options.position.of = self.mentions.element;
 		}
 
 		// Loading hint
@@ -95,6 +100,10 @@ function(self){ return {
 		// Empty hint
 		self.view.emptyHint()
 			.appendTo(self.emptyHint());
+
+		// Search hint
+		self.view.searchHint()
+			.appendTo(self.searchHint());
 
 		// Only reattach element when autocomplete is needed.
 		self.element.detach();
@@ -256,7 +265,7 @@ function(self){ return {
 			}
 		}
 
-		// Query dataset	
+		// Query dataset
 		if ($.isArray(data)) {
 
 			var dataset = data;
@@ -308,8 +317,15 @@ function(self){ return {
 
 		// If no keyword given or keyword doesn't meet minimum query length, stop.
 		var keyword = query.keyword;
+
 		if (keyword==="" || (keyword.length < query.minLength)) {
-			self.hide();
+
+			if (query.searchHint) {
+				self.element.addClass("search");
+				self.show();
+			} else {
+				self.hide();
+			}
 			return;
 		}
 
@@ -367,7 +383,7 @@ function(self){ return {
 	"{self} queryPrepare": function(el, event, query) {
 
 		// Remove both loading & empty class
-		el.removeClass("loading empty");
+		el.removeClass("loading empty search");
 
 		if (query.loadingHint) {
 			self.hide();
@@ -419,9 +435,6 @@ function(self){ return {
 				// Add empty class
 				element.addClass("empty");
 
-				// Trigger menuRender event
-				mentions.trigger("menuRender", [menu, query, autocomplete, mentions]);
-
 				// Show menu
 				self.show();
 
@@ -430,6 +443,9 @@ function(self){ return {
 
 				self.hide();
 			}
+
+			// Trigger menuRender event
+			mentions.trigger("menuRender", [menu, query, autocomplete, mentions]);
 
 			return;
 		}
@@ -642,7 +658,7 @@ function(self){ return {
 	"{menuItem} mouseout": function(menuItem) {
 
 		self.menuItem().removeClass("active");
-	},    
+	},
 
 	"{mentions} destroyed": function() {
 
