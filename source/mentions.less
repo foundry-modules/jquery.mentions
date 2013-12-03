@@ -35,7 +35,7 @@
 		// Ensure both pre & textarea
 		// has the same word wrap behavior.
 		white-space: pre-wrap;
-		word-wrap: break-word;		
+		word-wrap: break-word;
 
 		// Text color comes from textarea.
 		color: transparent;
@@ -71,7 +71,7 @@
 
 		// Ensure textarea is always above overlay
 		top: 0;
-		left: 0;		
+		left: 0;
 		z-index: 2;
 
 		// Ensure both pre & textarea
@@ -84,7 +84,7 @@
 		outline: none;
 
 		// Hide scrollbar on textarea
-		overflow: hidden;		
+		overflow: hidden;
 	}
 }
 
@@ -163,11 +163,29 @@
 			}
 		}
 	}
+
+	&.search {
+		.mentions-autocomplete-search {
+			display: block;
+		}
+		.mentions-menu {
+			display: none;
+		}
+		// Loading takes precendence
+		&.loading {
+			.mentions-autocomplete-search {
+				display: none;
+			}
+		}
+	}
 }
 
 .mentions-autocomplete-loading,
-.mentions-autocomplete-empty {
+.mentions-autocomplete-empty,
+.mentions-autocomplete-search {
 	display: none;
+	text-align: center;
+	padding: 6px;
 }
 
 .mentions-autocomplete-loading-indicator {
@@ -175,15 +193,6 @@
 	padding: 8px 0px;
 	height: 16px;
 	background: url("@{media_uri}/../images/loading.gif") center center no-repeat;
-}
-
-.mentions-autocomplete-empty-text {
-	padding: 8px 0px;
-	line-height: 16px;
-	font-size: 12px;
-	text-align: center;
-	display: block;
-	color: #888;
 }
 
 .mentions-autocomplete-inner {
@@ -220,10 +229,10 @@
 	}
 }
 
-.mentions-itemRemoveButton {   
+.mentions-itemRemoveButton {
     position: absolute;
     height: 20px;
-    padding: 0;    
+    padding: 0;
     right: 0;
     top: 0;
     width: 20px;
