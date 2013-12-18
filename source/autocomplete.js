@@ -1,4 +1,4 @@
-$.template("mentions/menu", '<div class="mentions-autocomplete" data-mentions-autocomplete><b><b></b></b><div class="mentions-autocomplete-inner" data-mentions-autocomplete-viewport><div class="mentions-autocomplete-loading" data-mentions-autocomplete-loading></div><div class="mentions-autocomplete-empty" data-mentions-autocomplete-empty></div><div class="mentions-autocomplete-search" data-mentions-autocomplete-search></div><ul class="mentions-menu" data-mentions-menu></ul></div></div>');
+$.template("mentions/menu", '<div class="mentions-autocomplete" data-mentions-autocomplete><b><b></b></b><div class="mentions-autocomplete-inner" data-mentions-autocomplete-viewport><div class="mentions-autocomplete-loading" data-mentions-autocomplete-loading data-mentions-autocomplete-close></div><div class="mentions-autocomplete-empty" data-mentions-autocomplete-empty></div><div class="mentions-autocomplete-search" data-mentions-autocomplete-search></div><ul class="mentions-menu" data-mentions-menu></ul></div></div>');
 $.template("mentions/menuItem", '<li class="mentions-menuItem" data-mentions-menuItem>[%== html %]</li>');
 $.template("mentions/loadingHint", '<i class="mentions-autocomplete-loading-indicator"></i>');
 $.template("mentions/searchHint", '<span class="mentions-autocomplete-search-hint">Type a keyword to begin.</span>');
@@ -61,7 +61,8 @@ $.Controller("Mentions.Autocomplete",
 		"{viewport}": "[data-mentions-autocomplete-viewport]",
 		"{loadingHint}": "[data-mentions-autocomplete-loading]",
 		"{emptyHint}": "[data-mentions-autocomplete-empty]",
-		"{searchHint}": "[data-mentions-autocomplete-search]"
+		"{searchHint}": "[data-mentions-autocomplete-search]",
+		"{closeButton}": "[data-mentions-autocomplete-close]"
     }
 },
 function(self){ return {
@@ -699,6 +700,11 @@ function(self){ return {
 	"{menuItem} mouseout": function(menuItem) {
 
 		self.menuItem().removeClass("active");
+	},
+
+	"{closeButton} click": function() {
+
+		self.hide();
 	},
 
 	"{mentions} destroyed": function() {
