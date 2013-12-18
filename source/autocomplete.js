@@ -181,7 +181,7 @@ function(self){ return {
 
 	hidden: true,
 
-	show: function() {
+	show: function(duration) {
 
 		clearTimeout(self.sleep);
 
@@ -194,6 +194,15 @@ function(self){ return {
 		self.viewport().removeClass("active");
 
 		self.setLayout();
+
+		if (duration) {
+
+			self.sleep = setTimeout(function(){
+
+				self.hide();
+
+			}, duration);
+		}
 	},
 
 	hide: function() {
@@ -467,8 +476,8 @@ function(self){ return {
 				// Add empty class
 				element.addClass("empty");
 
-				// Show menu
-				self.show();
+				// Show menu for only 2 seconds
+				self.show(2000);
 
 			// Just hide straight away
 			} else {
