@@ -93,17 +93,10 @@ function(self){ return {
 			self.options.position.of = self.mentions.element;
 		}
 
-		// Loading hint
-		self.view.loadingHint()
-			.appendTo(self.loadingHint());
-
-		// Empty hint
-		self.view.emptyHint()
-			.appendTo(self.emptyHint());
-
-		// Search hint
-		self.view.searchHint()
-			.appendTo(self.searchHint());
+		// Prepare this in advance to speed things up
+		self.defaultSearchHint  = self.view.searchHint().toHTML();
+		self.defaultEmptyHint   = self.view.emptyHint().toHTML();
+		self.defaultLoadingHint = self.view.loadingHint().toHTML();
 
 		// Only reattach element when autocomplete is needed.
 		self.element.detach();
@@ -320,8 +313,22 @@ function(self){ return {
 
 		if (keyword==="" || (keyword.length < query.minLength)) {
 
-			if (query.searchHint) {
+			var searchHint = query.searchHint;
+
+			if (searchHint) {
+
+				self.searchHint()
+					.html(
+						// If searchHint is a html string
+						$.isString(searchHint) ?
+							// use query-specific searchHint
+							searchHint :
+							// else use default searchHint
+							self.defaultSearchHint
+					);
+
 				self.element.addClass("search");
+
 				self.show();
 			} else {
 				self.hide();
@@ -392,8 +399,21 @@ function(self){ return {
 
 	"{self} queryBeforeStart": function(el, event, query) {
 
+		var loadingHint = query.loadingHint;
+
 		// Show loading hint
-		if (query.loadingHint) {
+		if (loadingHint) {
+
+			self.loadingHint()
+				.html(
+					// If searchHint is a html string
+					$.isString(loadingHint) ?
+						// use query-specific loadingHint
+						loadingHint :
+						// else use default loadingHint
+						self.defaultLoadingHint
+				);
+
 			el.addClass("loading");
 			self.show();
 		}
@@ -426,8 +446,20 @@ function(self){ return {
 		// If there are no items, hide menu.
 		if (items.length < 1) {
 
+			var emptyHint = query.emptyHint;
+
 			// If we are supposed to show an empty hint
-			if (query.emptyHint) {
+			if (emptyHint) {
+
+				self.emptyHint()
+					.html(
+						// If searchHint is a html string
+						$.isString(emptyHint) ?
+							// use query-specific emptyHint
+							emptyHint :
+							// else use default emptyHint
+							self.defaultEmptyHint
+					);
 
 				// Clear out menu
 				menu.empty();
