@@ -1,3 +1,5 @@
+@import "mentions/variables";
+
 .mentions {
 
 	// This is so textarea can
@@ -132,7 +134,18 @@
 	}
 }
 
-.mentions-autocomplete {
+.mentions-textfield {
+
+	.mentions > div {
+		color: @mentionsInputBackground;
+		span {
+			background: @mentionsBackground;
+		}
+	}
+}
+
+
+.mentions-autocomplete() {
 	position: absolute !important;
 	z-index: 99999 !important;
 	.box-shadow(0 3px 2px rgba(0,0,0,.15));
@@ -180,6 +193,10 @@
 	}
 }
 
+.mentions-autocomplete {
+	.mentions-autocomplete();
+}
+
 .mentions-autocomplete-loading,
 .mentions-autocomplete-empty,
 .mentions-autocomplete-search {
@@ -192,15 +209,16 @@
 	display: block;
 	padding: 8px 0px;
 	height: 16px;
-	background: url("@{media_uri}/../images/loading.gif") center center no-repeat;
+	background: url("@{global}/images/loading.gif") center center no-repeat;
 }
 
 .mentions-autocomplete-inner {
-	border: 1px solid #aaa;
+	border: 1px solid @mentionsBorder;
 	border-radius: 3px;
-	background: white;
     max-height: 150px;
     overflow-y: auto;
+	color: @mentionsAutocompleteColor;
+	background: @mentionsAutocompleteBackground;
 }
 
 .mentions-menu { //ul
@@ -220,41 +238,11 @@
 		}
 
 		&.active {
-			background: #E7EDF3;
+			background: @mentionsAutocompleteActiveBackground;
 		}
 
 		&.hidden {
 			display: none;
 		}
 	}
-}
-
-.mentions-itemRemoveButton {
-    position: absolute;
-    height: 20px;
-    padding: 0;
-    right: 0;
-    top: 0;
-    width: 20px;
-    opacity: 0.8;
-    cursor: pointer;
-
-    &:hover {
-    	opacity: 1;
-    }
-
-    > i {
-	    width: 8px !important;
-	    height: 8px !important;
-	    font-size: 8px !important;
-	    margin: 4px 0 0 6px !important;
-	    line-height: 10px !important;
-    }
-}
-
-.mentions-menu-avatar {
-	width: 16px;
-	height: 16px;
-	position: relative;
-    top: 1px;
 }
