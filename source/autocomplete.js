@@ -29,6 +29,8 @@ $.Controller("Mentions.Autocomplete",
 
 		id: "",
 
+		component: "",
+
 		// This is the default query options
 		// applied to all triggers unless
 		// trigger override them.
@@ -76,6 +78,7 @@ function(self){ return {
 
 			// And reimplement on the context menu we created ourselves
 			self.view.menu()
+				.addClass(self.options.component)
 				.appendTo("body")
 				.attr("id", self.options.id)
 				.data(self.Class.fullName, true)
