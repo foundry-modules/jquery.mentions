@@ -55,7 +55,7 @@
 
 		// Using span because it has less css conflicts
 		> span {
-			background: #C2E2FF;
+			background: @mentionsBackground;
 			border-radius: 2px;
 			.box-shadow(~"0 0 1px #005C87 inset");
 		}
@@ -92,9 +92,9 @@
 
 .mentions-inspector {
 
-	background: #fafafa;
+	background: @mentionsInspectorBackground;
 	.clearfix();
-	border-top: 1px solid #ccc;
+	border-top: 1px solid @mentionsInspectorBorder;
 	margin-top: 5px;
 
 	fieldset {
