@@ -131,7 +131,7 @@ function(self){ return {
 
         var textarea = self._textarea,
             overlay = self._overlay,
-            nodes = overlay.childNodes,
+            nodes = $.makeArray(overlay.childNodes),
             node,
             i = 0,
             start = 0,
@@ -154,6 +154,11 @@ function(self){ return {
 
                 return ret; // if ret is false, the parent loop will stop
             };
+
+        // Filter out nodes to ignore
+        $.remove(nodes, function(node){
+            return node.nodeType===1 && node.hasAttribute('data-ignore');
+        });
 
         while (node = nodes[i++]) {
 
@@ -404,10 +409,16 @@ function(self){ return {
         // - If there is a newline at the end of the overlay,
         //   an empty text node ensure overlay accomodates
         //   the height of the newline.
-        var last = overlay.lastChild;
+        var first = overlay.firstChild,
+            last = overlay.lastChild,
+            textNode = document.createTextNode("");
 
         if (!last || last.nodeName==="BR") {
-            overlay.appendChild(document.createTextNode(""));
+            overlay.appendChild(textNode);
+        }
+
+        if (last && last==first && last.nodeType===1 && last.hasAttribute("data-ignore")) {
+            overlay.insertBefore(textNode, last);
         }
 
         // Chrome, Opera & IE doesn't accomodate height of

@@ -21,6 +21,17 @@ $.extend(Marker.prototype, {
         return marker;
     },
 
+    nextSibling: function(node) {
+
+        var next = node.nextSibling;
+
+        while (next && next.nodeType===1 && next.hasAttribute("data-ignore")) {
+            next = next.nextSibling;
+        }
+
+        return next;
+    },
+
     insert: function(str, start, end) {
 
         // Marker
@@ -195,6 +206,7 @@ $.extend(Marker.prototype, {
 
         // Move the text node out and
         // place it before the next marker.
+        // Note: This doesn't need marker.nextSibling();
         parent.insertBefore(marker.text, block.nextSibling);
 
         // Remove the block node
@@ -220,6 +232,7 @@ $.extend(Marker.prototype, {
             text  = marker.text;
 
         // Insert block before the next marker
+        // Note: This doesn't need marker.nextSibling();
         parent.insertBefore(block, text.nextSibling);
 
         // Move text inside block marker
@@ -239,6 +252,7 @@ $.extend(Marker.prototype, {
             text   = marker.text,
             parent = marker.parent,
             block  = marker.block,
+            // Note: This doesn't need marker.nextSibling();
             next   = block ? block.nextSibling : text.nextSibling;
 
         // If not start and end position was given, assume that
