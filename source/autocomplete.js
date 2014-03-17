@@ -28,8 +28,8 @@ $.Controller("Mentions.Autocomplete",
 		},
 
 		id: "",
-
 		component: "",
+		modifier: "",
 
 		// This is the default query options
 		// applied to all triggers unless
@@ -67,7 +67,7 @@ $.Controller("Mentions.Autocomplete",
 		"{closeButton}": "[data-mentions-autocomplete-close]"
     }
 },
-function(self){ return {
+function(self, opts, base){ return {
 
     init: function() {
 
@@ -78,11 +78,12 @@ function(self){ return {
 
 			// And reimplement on the context menu we created ourselves
 			self.view.menu()
-				.addClass(self.options.component)
+				.attr("id", opts.id)
+				.addClass(opts.component)
+				.addClass(opts.modifier)
 				.appendTo("body")
-				.attr("id", self.options.id)
 				.data(self.Class.fullName, true)
-				.addController(self.Class, self.options);
+				.addController(self.Class, opts);
 
 			return;
 		}
@@ -93,8 +94,8 @@ function(self){ return {
 		mentions.pluginInstances["autocomplete"] = self;
 
 		// Set the position to be relative to the mentions
-		if (!self.options.position.of) {
-			self.options.position.of = self.mentions.element;
+		if (!opts.position.of) {
+			opts.position.of = self.mentions.element;
 		}
 
 		// Prepare this in advance to speed things up
