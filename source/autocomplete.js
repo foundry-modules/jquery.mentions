@@ -185,6 +185,12 @@ function(self, opts, base){ return {
 
 	"{mentions} triggerExit": function(el, event, marker, spawn, trigger, content) {
 
+		// Abort any running query
+		var query = self.activeQuery;
+		if (query) {
+			query.aborted = true;
+		}
+
 		self.hide();
 	},
 
@@ -339,6 +345,12 @@ function(self, opts, base){ return {
 
 	populate: function(marker, trigger, keyword) {
 
+		// Abort any running query
+		var query = self.activeQuery;
+		if (query) {
+			query.aborted = true;
+		}
+
 		// Create query object
 		var query = self.query(trigger.query);
 
@@ -479,6 +491,12 @@ function(self, opts, base){ return {
 	},
 
 	render: $.Enqueue(function(items, query){
+
+		// If query has been aborted, hide menu and stop.
+		if (query.aborted) {
+			self.hide();
+			return;
+		}
 
 		// If items passed in isn't an array,
 		// fake an empty array.
