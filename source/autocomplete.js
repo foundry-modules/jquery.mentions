@@ -30,6 +30,9 @@ $.Controller("Mentions.Autocomplete",
 		id: "",
 		component: "",
 		modifier: "",
+		shadow: false,
+		sticky: false,
+		animation: false,
 
 		// This is the default query options
 		// applied to all triggers unless
@@ -77,10 +80,14 @@ function(self, opts, base){ return {
 			self.destroy();
 
 			// And reimplement on the context menu we created ourselves
+			var menu =
 			self.view.menu()
 				.attr("id", opts.id)
 				.addClass(opts.component)
 				.addClass(opts.modifier)
+				.addClass(opts.shadow ? 'has-shadow' : '')
+				.addClass(opts.animation ? 'has-animation' : '')
+				.addClass(opts.sticky ? 'is-sticky' : '')
 				.appendTo("body")
 				.data(self.Class.fullName, true)
 				.addController(self.Class, opts);
