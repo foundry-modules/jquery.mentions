@@ -814,11 +814,25 @@ function(self){ return {
                 self.trigger("triggerChange", [marker, spawn, trigger, content]);
             }
         }
+    },
+
+    "{overlay} markerExit": function(overlay, event, marker, nodes, str, start, end) {
+
+        var trigger = marker.trigger;
+
+        if (!trigger) return;
+
+        var allowSpace = trigger.allowSpace || marker.allowSpace;
+
+        if (!allowSpace && marker.val()===trigger.key) {
+            marker.toTextMarker();
+        }
     }
 
     // Events available for use
     // "{overlay} markerRemove": function(overlay, event, marker) {},
     // "{overlay} markerConvert": function(overlay, event, marker, type) {},
+    // "{overlay} markerExit": function(overlay, event, marker, nodes, str, start, end) {},
     // "{self} triggerCreate": function(el, event, marker, trigger, content) {},
     // "{self} triggerDestroy": function(el, event, marker) {},
     // "{self} triggerChange": function(el, event, marker, spawn, trigger) {},

@@ -178,6 +178,8 @@ function(self, opts, base){ return {
 
 	"{mentions} triggerChange": function(el, event, marker, spawn, trigger, content) {
 
+		console.log('triggerChange', arguments);
+
 		self.populate(marker, trigger, content);
 
 		self.currentMarker = marker;
