@@ -97,6 +97,8 @@ function(self, opts, base){ return {
 
 		var mentions = self.mentions;
 
+		self.uid = $.uid();
+
 		mentions.autocomplete = self;
 		mentions.pluginInstances["autocomplete"] = self;
 
@@ -206,6 +208,26 @@ function(self, opts, base){ return {
 		self.viewport().removeClass("active");
 
 		self.setLayout();
+
+		// Hide autocomplete on click.
+		var doc = $(document),
+			hideOnClick = "click.mentions." + self.uid;
+
+		doc
+			.off(hideOnClick)
+			.on(hideOnClick, function(event){
+
+				// Collect list of bubbled elements
+				var targets = $(event.target).parents().andSelf();
+
+				// Don't hide autocomplete if user is clicking on itself
+				if (targets.filter(base).length > 0) return;
+
+				// Unbind hiding
+				doc.off(hideOnClick);
+
+				self.hide();
+			});
 
 		if (duration) {
 
