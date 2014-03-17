@@ -620,7 +620,9 @@ function(self, opts, base){ return {
 				}
 
 				// Prevent up/down keys from changing textfield cursor position.
-				event.preventDefault();
+				if (!self.hidden) {
+					event.preventDefault();
+				}
 				break;
 
 			// If down key is pressed
@@ -644,7 +646,9 @@ function(self, opts, base){ return {
 				}
 
 				// Prevent up/down keys from changing textfield cursor position.
-				event.preventDefault();
+				if (!self.hidden) {
+					event.preventDefault();
+				}
 				break;
 
 			// If escape is pressed,
