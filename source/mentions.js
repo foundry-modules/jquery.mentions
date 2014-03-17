@@ -816,17 +816,20 @@ function(self){ return {
         }
     },
 
-    "{overlay} markerExit": function(overlay, event, marker, nodes, str, start, end) {
+    "{overlay} markerExit": function(overlay, event, marker, nodes, spawn, str, start, end) {
 
         var trigger = marker.trigger;
 
         if (!trigger) return;
 
-        var allowSpace = trigger.allowSpace || marker.allowSpace;
+        var allowSpace = trigger.allowSpace || marker.allowSpace,
+            content = marker.val();
 
         if (!allowSpace && marker.val()===trigger.key) {
             marker.toTextMarker();
         }
+
+        self.trigger("triggerExit", [marker, spawn, trigger, content]);
     }
 
     // Events available for use

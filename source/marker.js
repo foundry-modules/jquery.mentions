@@ -105,7 +105,7 @@ $.extend(Marker.prototype, {
         // space & newline should be added to beginning of the next marker.
         if (block && end==length && !backspace && (spawnSpace || newline || br || finalized)) {
             var spawn = marker.spawn().insert(str, 0);
-            $(parent).trigger("markerExit", [marker, nodes, str, start, end]);
+            $(parent).trigger("markerExit", [marker, nodes, spawn, str, start, end]);
             return spawn;
         }
 
