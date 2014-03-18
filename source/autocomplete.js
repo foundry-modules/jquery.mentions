@@ -744,6 +744,12 @@ function(self, opts, base){ return {
 		// Set caret position
 		self.mentions.textarea().caret(marker.start + title.length);
 
+		// Normalize is required so self.lengthBefore is correct.
+		// Marker may run off when a user creates a block marker from
+		// autocomplete, changes the cursor before/at the beginning of the
+		// block marker, and presses backspace.
+		self.mentions.normalize();
+
 		// Quick hack to prevent repopulation
 		self.hidden = true;
 
