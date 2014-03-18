@@ -354,7 +354,12 @@ function(self){ return {
                 // Remove characters from text marker
                 // doe --> e
                 // hello [john] doe --> hello [john] e
-                marker.insert("", 0, end - marker.start);
+
+                // Do not perform this operation if it does
+                // not changes the value of the marker.
+                if ((end - marker.start) > 0) {
+                    marker.insert("", 0, end - marker.start);
+                }
 
                 // Remove all markers in between
                 // [john] --> (removed)
