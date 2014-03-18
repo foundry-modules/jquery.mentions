@@ -609,13 +609,13 @@ function(self){ return {
         var previousMarker = self.previousMarker,
             block = marker.block;
 
+        // If the previous marker hasn't been finalized, convert back to text block.
         if (previousMarker) {
 
             var previousBlock = previousMarker.block,
                 finalize = (previousMarker.trigger || {}).finalize;
 
-            // TODO: Make this less temperamental.
-            if (previousBlock && finalize && !previousBlock.finalized && previousBlock!==block) {
+            if (previousBlock && finalize && !previousMarker.finalized && previousBlock!==block) {
                 try {
                     previousMarker.toTextMarker();
                 } catch(e) {
