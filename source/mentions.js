@@ -209,6 +209,25 @@ function(self){ return {
             if (block) {
                 var $node = $(node), data = $node.data("marker");
                 if (!data) (data = {}) && $node.data("marker", data);
+
+                // Restore trigger from data attribute
+                if (node.hasAttribute(_keyAttr)) {
+
+                    var key = $node.attr(_keyAttr),
+                        trigger = self.getTrigger(key);
+
+                    if (trigger) data.trigger = trigger;
+                    $node.removeAttr(_keyAttr);
+                }
+
+                // Restore value from data attribute
+                if (node.hasAttribute(_valueAttr)) {
+
+                    data.value = $node.attr(_valueAttr);
+                    data.finalized = true;
+                    $node.removeAttr(_valueAttr);
+                }
+
                 $.extend(props, data);
             }
 
