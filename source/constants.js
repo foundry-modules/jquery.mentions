@@ -2,7 +2,7 @@ var _backspace = "",
     _space     = " ",
     _nbsp      = "\u00a0",
     _newline   = "\n",
-    _keyAttr   = "data-key",
+    _typeAttr  = "data-type",
     _valueAttr = "data-value",
     KEYCODE = {
         BACKSPACE: 8,

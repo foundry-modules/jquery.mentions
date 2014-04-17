@@ -737,8 +737,8 @@ function(self, opts, base){ return {
 
 		var value = item;
 
-		if (query.trigger.use) {
-			value = query.trigger.use(item);
+		if (query.use) {
+			value = query.use(item);
 		}
 
 		// Finalize marker

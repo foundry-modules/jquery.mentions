@@ -110,6 +110,21 @@ function(self){ return {
         }
     },
 
+    getTriggerFromType: function(type) {
+
+        var triggers = self.options.triggers,
+            found;
+
+        $.each(triggers, function(key, trigger) {
+            if (trigger.type===type) {
+                found = trigger;
+                return false;
+            }
+        });
+
+        return found;
+    },
+
     getStopIndex: function(str, stop) {
 
         var i = stop.length,
@@ -211,13 +226,13 @@ function(self){ return {
                 if (!data) (data = {}) && $node.data("marker", data);
 
                 // Restore trigger from data attribute
-                if (node.hasAttribute(_keyAttr)) {
+                if (node.hasAttribute(_typeAttr)) {
 
-                    var key = $node.attr(_keyAttr),
-                        trigger = self.getTrigger(key);
+                    var type = $node.attr(_typeAttr),
+                        trigger = self.getTriggerFromType(type);
 
                     if (trigger) data.trigger = trigger;
-                    $node.removeAttr(_keyAttr);
+                    $node.removeAttr(_typeAttr);
                 }
 
                 // Restore value from data attribute
@@ -300,7 +315,7 @@ function(self){ return {
                     key = wholeText.slice(0, 1),
                     trigger = self.getTrigger(key);
 
-                if (!trigger) return;
+                if (!trigger) return null;
 
                 marker.trigger = trigger;
                 marker.value = wholeText.slice(1);
