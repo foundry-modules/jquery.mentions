@@ -735,8 +735,14 @@ function(self, opts, base){ return {
 
 		delete item["menuHtml"];
 
+		var value = item;
+
+		if (query.trigger.use) {
+			value = query.trigger.use(item);
+		}
+
 		// Finalize marker
-		marker.finalize(item);
+		marker.finalize(value);
 
 		// Replace textarea text
 		self.mentions.textareaInsert(title, marker.start, marker.end);
