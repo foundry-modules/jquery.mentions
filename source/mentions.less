@@ -1,5 +1,4 @@
 @import "mentions/variables";
-@import "@{site}/mentions/variables";
 
 .mentions {
 
@@ -285,7 +284,7 @@
 		font-size: 13px;
 
 		+ .mentions-menuItem {
-			border-top: 1px solid #ddd;
+			border-top: 1px solid @mentionsTextareaBorder;
 		}
 
 		&.active {
