@@ -74,6 +74,10 @@ function(self, opts, base){ return {
 
     init: function() {
 
+        // This doesn't need to be immediately initialized.
+        // Shaves off about 20ms.
+        setTimeout(function(){
+
 		// Destroy controller
 		if (!self.element.data(self.Class.fullName)) {
 
@@ -114,6 +118,8 @@ function(self, opts, base){ return {
 
 		// Only reattach element when autocomplete is needed.
 		self.element.detach();
+
+		}, 50);
     },
 
 	setLayout: function() {
