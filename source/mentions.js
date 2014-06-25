@@ -29,7 +29,10 @@ function(self){ return {
         self._overlay  = self.overlay()[0];
         self._textarea = self.textarea()[0];
 
-        self.cloneLayout();
+        // Put this in a non-blocking thread
+        setTimeout(function(){
+            self.cloneLayout();
+        }, 15);
 
         if (self.options.inspector) {
             self.inspect();
@@ -52,14 +55,19 @@ function(self){ return {
 
     cloneLayout: function() {
 
-        var textarea = self.textarea(),
-            overlay  = self.overlay();
+        var $overlay = self.overlay(),
+            overlay = $overlay.detach()[0],
+            textarea = self.textarea(),
+            props = self.options.cssCloneProps,
+            i = 0;
 
-        $.each(self.options.cssCloneProps, function() {
-            overlay.css(this, textarea.css(this));
-        });
+        while (prop = props[i++]) {
+            overlay.style[prop] = textarea.css(prop);
+        }
 
-        overlay.css('opacity', 1);
+        overlay.style.opacity = 1;
+
+        $overlay.insertBefore(textarea);
 
         self.setLayout();
     },
