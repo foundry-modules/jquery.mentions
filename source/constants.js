@@ -29,7 +29,13 @@ $.fn.caret = function(start, end) {
         {
             if (this.setSelectionRange)
             {
-                this.setSelectionRange(start, end);
+                var obj = this;
+
+                // window.setTimout is a walkaround to address the chrome bug.
+                window.setTimeout(function() {
+                    obj.setSelectionRange(start, end);
+                }, 0);
+
             } else if (this.createTextRange)
             {
                 var range = this.createTextRange();
